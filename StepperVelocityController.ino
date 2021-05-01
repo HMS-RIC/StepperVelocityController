@@ -41,19 +41,11 @@ const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / MICROSTEPS_PER_MOTOR_REV
 bool PIDMode = false;
 float currPos = 0;
 float targetPos = 0;
+float error = 0;
+float newVelocity = 0;
 float errorThresh = 0.1; // don't move if abs(error) is below this value
 
 SPid pidState;
-// Set P, I, and D gain values
-pidState.propGain = 1;     // proportional gain
-pidState.integratGain = 0;  // integral gain
-pidState.derGain = 0;    // derivative gain
-// Limit integrator values to avoid windup (due to reaching motor's top velocity)
-pidState.integratMax = 1000;  // Maximum and minimum
-pidState.integratMin = -1000;  // allowable integrator state
-// Set internal states to 0
-pidState.derState = 0;     // Last position input
-pidState.integratState = 0;  // Integrator state
 
 
 // ========  SPI/Motor Settings  ==============
@@ -69,6 +61,17 @@ void DEBUG(String message) {
 
 void setup()
 {
+  // Set P, I, and D gain values
+  pidState.propGain = 1;     // proportional gain
+  pidState.integratGain = 0;  // integral gain
+  pidState.derGain = 0;    // derivative gain
+  // Limit integrator values to avoid windup (due to reaching motor's top velocity)
+  pidState.integratMax = 1000;  // Maximum and minimum
+  pidState.integratMin = -1000;  // allowable integrator state
+  // Set internal states to 0
+  pidState.derState = 0;     // Last position input
+  pidState.integratState = 0;  // Integrator state
+
   Serial.begin(115200);
   // Start by setting up the pins and the SPI peripheral.
   //  The library doesn't do this for you!
@@ -259,8 +262,8 @@ void interpretCommand(String message) {
       PIDMode = true;
       targetPos = arg1;
       currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-      float error = (targetPos - currPos);
-      float newVelocity = UpdatePID(&pidState, error, currPos);
+      error = (targetPos - currPos);
+      newVelocity = UpdatePID(&pidState, error, currPos);
       // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
       if (newVelocity >= 0) {
         motor.run(FWD, newVelocity);
@@ -272,10 +275,10 @@ void interpretCommand(String message) {
     case 'E': // E: Track error (PID mode)
     case 'e':
       PIDMode = true;
-      float error = arg1;
+      error = arg1;
       currPos = motor.getPos() * UNITS_PER_MICROSTEP;
       targetPos = currPos + error;
-      float newVelocity = UpdatePID(&pidState, error, currPos);
+      newVelocity = UpdatePID(&pidState, error, currPos);
       // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
       if (newVelocity >= 0) {
         motor.run(FWD, newVelocity);
