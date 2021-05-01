@@ -137,13 +137,44 @@ void interpretCommand(String message) {
 
   switch (command) {
 
-    case 'S': // S: set speed
+    case 'S': // S: set max speed
     case 's':
       motor.setMaxSpeed(arg1);
       Serial.print("Speed set to ");
       Serial.print(arg1);
       Serial.println(" steps/s");
       break;
+
+    case 'A': // A: set accel rate
+    case 'a':
+      motor.setAcc(arg1);
+      motor.setDec(arg1);
+      Serial.print("Speed accel rate to ");
+      Serial.print(arg1);
+      Serial.println(" steps/s^2");
+      break;
+
+    case 'P': // P: set P gain
+    case 'p':
+      pidState.propGain = arg1;
+      Serial.print("Set P gain to ");
+      Serial.println(arg1);
+      break;
+
+    case 'I': // I: set I gain
+    case 'i':
+      pidState.integratGain = arg1;
+      Serial.print("Set I gain to ");
+      Serial.println(arg1);
+      break;
+
+    case 'D': // D: set D gain
+    case 'd':
+      pidState.derGain = arg1;
+      Serial.print("Set D gain to ");
+      Serial.println(arg1);
+      break;
+
 
     case 'X': // X: soft stop
     case 'x':
