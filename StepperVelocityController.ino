@@ -196,10 +196,10 @@ void interpretCommand(String message) {
     case 'F': // F: forward
     case 'f':
       PIDMode = false;
-      motor.move(FWD, arg1);
+      motor.move(FWD, (float)arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Forward ");
       Serial.print(arg1);
-      Serial.println(" steps");
+      Serial.println(" units");
       break;
 
     case 'B': // B/R: Reverse
@@ -207,10 +207,10 @@ void interpretCommand(String message) {
     case 'R':
     case 'r':
       PIDMode = false;
-      motor.move(REV, arg1);
+      motor.move(REV, (float)arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Backward ");
       Serial.print(arg1);
-      Serial.println(" steps");
+      Serial.println(" units");
       break;
 
     case 'G': // G: Go to position
@@ -219,7 +219,7 @@ void interpretCommand(String message) {
         PIDMode = false;
         Serial.print("Moving to position ");
         Serial.println(arg1);
-        motor.goTo(arg1);
+        motor.goTo((float)arg1/UNITS_PER_MICROSTEP);
         // while (motor.busyCheck()) {
         //   delay(1);
         // }
