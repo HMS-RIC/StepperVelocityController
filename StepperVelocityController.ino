@@ -287,6 +287,17 @@ void interpretCommand(String message) {
       }
       break;
 
+    case 'W': // W: Report position ([W]here am I?)
+    case 'w':
+      int currSteps = motor.getPos();
+      currPos = currSteps * UNITS_PER_MICROSTEP;
+      Serial.print("Current location: ");
+      Serial.print(currPos);
+      Serial.print("\t\t (");
+      Serial.print(currSteps);
+      Serial.println(" steps)");
+      break;
+
     case '?': // ?: Report motor status
       Serial.println(motor.getFullStatusString());
       break;
