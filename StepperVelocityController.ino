@@ -5,8 +5,8 @@
 
 // Motor setup
 const float Vsupply = 12;   // DC supply voltage
-const float Vmotor = 3.8;   // motor's nominal voltage (in V)
-const byte Ithresh = OCD_TH_1875mA; // over-current threshold
+const float Vmotor = 4.5;   // motor's nominal voltage (in V)
+const byte Ithresh = OCD_TH_750mA; // over-current threshold
 
 const float Kaccl = 1.2; // fraction of full voltage for acceleration
 const float Krun  = 1.0; // fraction of full voltage for const. vel.
@@ -51,7 +51,7 @@ SPid pidState;
 // ========  SPI/Motor Settings  ==============
 const int resetPin = 4;
 const int SCKPin = 13;
-const int CSPin = 10;
+const int CSPin = A2;
 XNucleoStepper motor(0, CSPin, resetPin);
 
 void DEBUG(String message) {
