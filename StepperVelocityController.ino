@@ -126,44 +126,53 @@ void readUSB() {
 }
 
 void interpretCommand(String message) {
+  long int startCommandTime = micros();
   message.trim(); // remove leading and trailing white space
   int len = message.length();
   if (len==0) {
-    Serial.print("#"); // "#" means error
-    Serial.print(message); // added TO
+    Serial.println("#"); // "#" means error
     return;
   }
   char command = message[0]; // the command is the first char of a message
   String parameters = message.substring(1);
   parameters.trim();
 
-  String intString = "";
-  while ((parameters.length() > 0) && (isDigit(parameters[0]))) {
-    intString += parameters[0];
-    parameters.remove(0,1);
-  }
-  long arg1 = intString.toInt();
+  float arg1 = parameters.toFloat();
+  bool noArg = (parameters.length() == 0);
 
   DEBUG(String("Command: ")+command);
   DEBUG(String("Argument 1: ")+arg1);
+  if (noArg) DEBUG("-- No Arg --");
 
   switch (command) {
 
     case 'S': // S: set max speed
     case 's':
-      motor.setMaxSpeed(arg1);
-      Serial.print("Speed set to ");
-      Serial.print(arg1);
-      Serial.println(" steps/s");
+      if (noArg) {
+        Serial.print("Max speed: ");
+        Serial.print(motor.getMaxSpeed());
+        Serial.println(" steps/s");
+      } else {
+        motor.setMaxSpeed(arg1);
+        Serial.print("Max speed set to ");
+        Serial.print(arg1);
+        Serial.println(" steps/s");
+      }
       break;
 
     case 'A': // A: set accel rate
     case 'a':
-      motor.setAcc(arg1);
-      motor.setDec(arg1);
-      Serial.print("Speed accel rate to ");
-      Serial.print(arg1);
-      Serial.println(" steps/s^2");
+      if (noArg) {
+        Serial.print("Accel rate: ");
+        Serial.print(motor.getAcc());
+        Serial.println(" steps/s^2");
+      } else {
+        motor.setAcc(arg1);
+        motor.setDec(arg1);
+        Serial.print("Speed accel rate to ");
+        Serial.print(arg1);
+        Serial.println(" steps/s^2");
+      }
       break;
 
     case 'P': // P: set P gain
@@ -205,10 +214,13 @@ void interpretCommand(String message) {
     case 'F': // F: forward
     case 'f':
       PIDMode = false;
-      motor.move(FWD, (float)arg1/UNITS_PER_MICROSTEP);
+      motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Forward ");
       Serial.print(arg1);
       Serial.println(" units");
+      while (motor.busyCheck()) {
+        delay(1);
+      }
       break;
 
     case 'B': // B/R: Reverse
@@ -216,32 +228,31 @@ void interpretCommand(String message) {
     case 'R':
     case 'r':
       PIDMode = false;
-      motor.move(REV, (float)arg1/UNITS_PER_MICROSTEP);
+      motor.move(REV, arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Backward ");
       Serial.print(arg1);
       Serial.println(" units");
+      while (motor.busyCheck()) {
+        delay(1);
+      }
       break;
 
     case 'G': // G: Go to position
     case 'g':
-      if (arg1 >= 0) {
-        PIDMode = false;
-        Serial.print("Moving to position ");
-        Serial.println(arg1);
-        motor.goTo((float)arg1/UNITS_PER_MICROSTEP);
-        // while (motor.busyCheck()) {
-        //   delay(1);
-        // }
-      } else {
-        Serial.println("GoTo: please provide a non-negative position.");
-      }
+      PIDMode = false;
+      Serial.print("Moving to position ");
+      Serial.println(arg1);
+      motor.goTo(arg1/UNITS_PER_MICROSTEP);
+      // while (motor.busyCheck()) {
+      //   delay(1);
+      // }
       break;
 
     case 'Z': // Z: Re-zero at current position
     case 'z':
       // reset position to limit switch
       PIDMode = false;
-      Serial.print("Zeroing");
+      Serial.println("Zeroing");
       motor.resetPos();
       currPos = 0;
       targetPos = 0;
@@ -312,14 +323,19 @@ void interpretCommand(String message) {
       break;
 
     case '!': // !: Check Flag status
-    // TODO check flag status first....
-        Serial.print("Motor-1: ");
-        Serial.println(motor.getAlarmStatusString());
+      // TODO check flag status first....
+      Serial.println(motor.getAlarmStatusString());
+      break;
+
+    case '$': // '$' re-configure motor
+      configMotor(&motor);
       break;
 
     default: // unknown command
       Serial.println("#"); // "#" means error
   } // switch(command)
+
+  DEBUG(String("Time: ")+(micros()-startCommandTime));
 }
 
 void configSPI() {
