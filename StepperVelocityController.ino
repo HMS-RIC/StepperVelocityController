@@ -40,6 +40,7 @@ const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / MICROSTEPS_PER_MOTOR_REV
 // PID / Targetting
 bool PIDMode = false;
 float currPos = 0;
+int currSteps = 0;
 float targetPos = 0;
 float error = 0;
 float newVelocity = 0;
@@ -289,7 +290,7 @@ void interpretCommand(String message) {
 
     case 'W': // W: Report position ([W]here am I?)
     case 'w':
-      int currSteps = motor.getPos();
+      currSteps = motor.getPos();
       currPos = currSteps * UNITS_PER_MICROSTEP;
       Serial.print("Current location: ");
       Serial.print(currPos);
