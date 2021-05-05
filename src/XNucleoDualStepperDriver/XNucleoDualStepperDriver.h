@@ -26,7 +26,7 @@ class XNucleoStepper
     //  nice functions for; give them unrestricted access to the parameter
     //  registers.
     void setParam(byte param, unsigned long value);
-    unsigned long getParam(byte param);
+    long getParam(byte param);
 
     // Lots of people just want Commands That Work; let's provide them!
     // Start with some configuration commands
@@ -99,8 +99,8 @@ class XNucleoStepper
 
   private:
     byte SPIXfer(byte data);
-    unsigned long xferParam(unsigned long value, byte bitLen);
-    unsigned long paramHandler(byte param, unsigned long value);
+    long xferParam(unsigned long value, byte bitLen);
+    long paramHandler(byte param, unsigned long value);
 
     // Support functions for converting from user units to L6470 units
     unsigned long accCalc(float stepsPerSecPerSec);
