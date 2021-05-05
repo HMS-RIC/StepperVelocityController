@@ -6,14 +6,15 @@
 // Motor setup
 const float Vsupply = 12;   // DC supply voltage
 const float Vmotor = 4.5;   // motor's nominal voltage (in V)
-const byte Ithresh = OCD_TH_750mA; // over-current threshold
+const byte Ithresh = OCD_TH_1125mA; // over-current threshold
 
 const float Kaccl = 1.2; // fraction of full voltage for acceleration
 const float Krun  = 1.0; // fraction of full voltage for const. vel.
 const float Khold = 0.5; // fraction of full voltage for holding
 
 // Velocity/accleration profile:
-// From stop, motor will first jump to minSpeed, then accelerate at accelRate up to (at most) maxSpeed.
+// From stop, motor will first jump to minSpeed, then accelerate
+// at accelRate up to (at most) maxSpeed.
 // Deceleration rate is also set to be accelRate.
 const int minSpeed = 160; // in steps/s;
 const int maxSpeed = 1000; // in steps/s
@@ -28,8 +29,8 @@ const float goToLimitSpeed = 500.0; // in steps/s
 // (property of the stepper motor; typically 200)
 const int FULL_STEPS_PER_MOTOR_REV = 200;
 // Microstep mode
-const int stepMode = STEP_FS_64; // 64 microsteps per step
-const int MICROSTEPS_PER_MOTOR_REV = 64 * FULL_STEPS_PER_MOTOR_REV;
+const int stepMode = STEP_FS_8; // no microsteps
+const int MICROSTEPS_PER_MOTOR_REV = 8 * FULL_STEPS_PER_MOTOR_REV;
 // How many phyical units of translation in one complete motor revolution?
 const float UNITS_PER_MOTOR_REV = 360;
 // We can compute our conversion factor:
