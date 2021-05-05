@@ -62,6 +62,8 @@ void DEBUG(String message) {
 
 void setup()
 {
+  Serial.begin(115200);
+
   // Set P, I, and D gain values
   pidState.propGain = 1;     // proportional gain
   pidState.integratGain = 0;  // integral gain
@@ -73,13 +75,18 @@ void setup()
   pidState.derState = 0;     // Last position input
   pidState.integratState = 0;  // Integrator state
 
-  Serial.begin(115200);
   // Start by setting up the pins and the SPI peripheral.
   //  The library doesn't do this for you!
   configSPI();
   pinMode(CSPin, OUTPUT);
   digitalWrite(CSPin, HIGH);
   configMotor(&motor);
+
+  // reset alarms on both motors (to turn off (red) alarm LED
+  // on XNucleo board)
+  XNucleoStepper motor2(1, CSPin, resetPin);
+  motor2.getAlarmStatusString();
+  motor.getAlarmStatusString();
 }
 
 unsigned long prevTime = micros();
@@ -90,8 +97,9 @@ void loop()
 {
   // debugging code to get loop time:
   //    (as of 1/2017 loop takes ~32 microseconds)
-  DEBUG(String(micros()-prevTime));
-  prevTime = micros();
+  // DEBUG(String(micros()-prevTime));
+  // delay(100);
+  // prevTime = micros();
 
   readUSB();
 
