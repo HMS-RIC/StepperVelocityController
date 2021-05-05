@@ -40,7 +40,7 @@ const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / MICROSTEPS_PER_MOTOR_REV
 // PID / Targetting
 bool PIDMode = false;
 float currPos = 0;
-int currSteps = 0;
+long currSteps = 0;
 float targetPos = 0;
 float error = 0;
 float newVelocity = 0;
