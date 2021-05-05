@@ -351,8 +351,7 @@ void configSPI() {
 
 void configMotor(XNucleoStepper* motor)
 {
-  int paramValue;
-  //Serial.println("Configuring motor...");
+  Serial.println("Configuring motor...");
 
   // Before we do anything, we need to tell each board which SPI
   //  port we're using. Most of the time, there's only the one,
@@ -360,12 +359,26 @@ void configMotor(XNucleoStepper* motor)
   //  than one, so don't take it for granted.
   motor->SPIPortConnect(&SPI);
 
+  DEBUG(String("POS: ") + motor->getPos());
+  DEBUG(String("OCThreshold: ") + motor->getOCThreshold());
+  DEBUG(String("RunKVAL: ") + motor->getRunKVAL());
+  DEBUG(String("AccKVAL: ") + motor->getAccKVAL());
+  DEBUG(String("DecKVAL: ") + motor->getDecKVAL());
+  DEBUG(String("HoldKVAL: ") + motor->getHoldKVAL());
+  DEBUG(String("MinSpeed: ") + motor->getMinSpeed());
+  DEBUG(String("MaxSpeed: ") + motor->getMaxSpeed());
+  DEBUG(String("FullSpeed: ") + motor->getFullSpeed());
+  DEBUG(String("Acc: ") + motor->getAcc());
+  DEBUG(String("Dec: ") + motor->getDec());
+  DEBUG(String("StepMode: ") + motor->getStepMode());
+
   // Set the Overcurrent Threshold. The OC detect circuit
   //  is quite sensitive; even if the current is only momentarily
   //  exceeded during acceleration or deceleration, the driver
   //  will shutdown. This is a per channel value; it's useful to
   //  consider worst case, which is startup.
   motor->setOCThreshold(Ithresh);
+  // DEBUG(String("OCThreshold: ") + motor->getOCThreshold());
 
   // KVAL is a modifier that sets the effective voltage applied
   //  to the motor. KVAL/255 * Vsupply = effective motor voltage.
@@ -375,25 +388,34 @@ void configMotor(XNucleoStepper* motor)
   //  high current.
   float Kval = Vmotor/Vsupply * 255;
   motor->setRunKVAL(round(Krun*Kval));
+  // DEBUG(String("RunKVAL: ") + motor->getRunKVAL());
   motor->setAccKVAL(round(Kaccl*Kval));
+  // DEBUG(String("AccKVAL: ") + motor->getAccKVAL());
   motor->setDecKVAL(round(Kaccl*Kval));
+  // DEBUG(String("DecKVAL: ") + motor->getDecKVAL());
   motor->setHoldKVAL(round(Khold*Kval));
+  // DEBUG(String("HoldKVAL: ") + motor->getHoldKVAL());
 
   // When a move command is issued, max speed is the speed the
   //  motor tops out at while completing the move, in steps/s
   motor->setMinSpeed(minSpeed);
+  // DEBUG(String("MinSpeed: ") + motor->getMinSpeed());
   motor->setMaxSpeed(maxSpeed);
+  // DEBUG(String("MaxSpeed: ") + motor->getMaxSpeed());
   motor->setFullSpeed(maxSpeed);       // microstep below this speed
+  // DEBUG(String("FullSpeed: ") + motor->getFullSpeed());
 
 
   // Acceleration and deceleration in steps/s/s. Increasing this
   //  value makes the motor reach its full speed more quickly,
   //  at the cost of possibly causing it to slip and miss steps.
   motor->setAcc(accelRate);
+  // DEBUG(String("Acc: ") + motor->getAcc());
   motor->setDec(accelRate);
+  // DEBUG(String("Dec: ") + motor->getDec());
 
   motor->configStepMode(stepMode);    // microsteps per step
-
+  // DEBUG(String("StepMode: ") + motor->getStepMode());
 
   // // Not sure if we need any of these:
   // motor->configSyncPin(BUSY_PIN, 0);// BUSY pin low during operations;
@@ -405,6 +427,18 @@ void configMotor(XNucleoStepper* motor)
   // motor->setSwitchMode(SW_USER);    // Switch is not hard stop
   // motor->setOscMode(INT_16MHZ_OSCOUT_16MHZ); // 16MHz internal oscil
 
+  DEBUG(String("POS: ") + motor->getPos());
+  DEBUG(String("OCThreshold: ") + motor->getOCThreshold());
+  DEBUG(String("RunKVAL: ") + motor->getRunKVAL());
+  DEBUG(String("AccKVAL: ") + motor->getAccKVAL());
+  DEBUG(String("DecKVAL: ") + motor->getDecKVAL());
+  DEBUG(String("HoldKVAL: ") + motor->getHoldKVAL());
+  DEBUG(String("MinSpeed: ") + motor->getMinSpeed());
+  DEBUG(String("MaxSpeed: ") + motor->getMaxSpeed());
+  DEBUG(String("FullSpeed: ") + motor->getFullSpeed());
+  DEBUG(String("Acc: ") + motor->getAcc());
+  DEBUG(String("Dec: ") + motor->getDec());
+  DEBUG(String("StepMode: ") + motor->getStepMode());
 
 
 }
