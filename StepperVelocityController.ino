@@ -110,50 +110,65 @@ void loop()
   // delay(100);
   // prevTime = micros();
 
+  // 1) Read and interpret new Serial commands
   readUSB();
 
+  // 2) Track target (if in PIDMode)
+  if (PIDMode) {
+    if (micros()-updateVelTime > 1000) { // every 1 ms
+      updateVelTime = micros();
+      track();
+    }
+  }
+
+  // 3) Update target for internal (debug) stimuli
   if (internalStimType > 0) {
-    if (micros()-startStimTime > 1e7) {
-      internalStimType = 0;
-      motor.softStop();
-      motor.resetPos();
-    } else {
-      if (micros()-updateVelTime > 1000) { // every 1 ms
-        updateVelTime = micros();
-        // update velocity
-        currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-        error = (targetPos - currPos);
-        newVelocity = UpdatePID(&pidState, error, currPos);
-        // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-        if (abs(error)<0.1) {
-          motor.softStop();
-        } else if (newVelocity >= 0) {
-          motor.run(FWD, newVelocity);
-        } else {
-          motor.run(REV, -newVelocity);
-        }
-        static int printCount = 0;
-        if ((++printCount % 5)==0) {
-          printCount == 0;
-          Serial.print(currPos);
-          Serial.print(" ");
-          Serial.print(targetPos);
-          Serial.print(" ");
-          Serial.print(error);
-          Serial.println(" 0 0 0 0");
-        }
-      }
-      if (micros()-updateTargetTime > 16666) { // every 16.6 ms (60 Hz)
-        updateTargetTime = micros();
-        float stimTime = (float)(micros() - startStimTime)/1e6; // stim time in sec
-        if (internalStimType == 1) {
-          targetPos = sinAmp * sin(sinFreq*stimTime*2*3.141529);
-        } else {
-          targetPos = 0;
-          if ((stimTime>2)&&(stimTime<8)) targetPos = 180;
-        }
+    if (micros()-updateTargetTime > 16666) { // every 16.6 ms (60 Hz)
+      updateTargetTime = micros();
+      float stimTime = (float)(micros() - startStimTime)/1e6; // stim time in sec
+      if (internalStimType == 1) {
+        targetPos = sinAmp * sin(sinFreq*stimTime*2*3.141529);
+      } else {
+        targetPos = 0;
+        if ((stimTime>2)&&(stimTime<8)) targetPos = 180;
       }
     }
+  }
+
+  // 4) Stop tracking if stopped and last update was > 1s ago
+  if (micros()-updateTargetTime > 1e6) {
+    if (abs(error)<0.1) {
+      PIDMode = false;
+      internalStimType = 0;
+      motor.softStop();
+    }
+  }
+}
+
+void track() {
+  // update velocity
+  currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+  error = (targetPos - currPos);
+  newVelocity = UpdatePID(&pidState, error, currPos);
+  // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
+  if (abs(error)<0.1) {
+    motor.softStop();
+  } else if (newVelocity >= 0) {
+    motor.run(FWD, newVelocity);
+  } else {
+    motor.run(REV, -newVelocity);
+  }
+
+  // output trakcing info for Arduino Serial Plotter
+  static int printCount = 0;
+  if ((++printCount % 5)==0) {
+    printCount == 0;
+    Serial.print(currPos);
+    Serial.print(" ");
+    Serial.print(targetPos);
+    Serial.print(" ");
+    Serial.print(error);
+    Serial.println(" 0 0 0 0");
   }
 }
 
@@ -252,6 +267,7 @@ void interpretCommand(String message) {
     case 'X': // X: soft stop
     case 'x':
       PIDMode = false;
+      internalStimType = 0;
       motor.softStop();
       Serial.println("Stopping");
       break;
@@ -259,6 +275,7 @@ void interpretCommand(String message) {
     case 'Q': // Q: Hi-Z (free movements)
     case 'q':
       PIDMode = false;
+      internalStimType = 0;
       motor.softHiZ();
       Serial.println("High-Z (free movement)");
       break;
@@ -266,6 +283,7 @@ void interpretCommand(String message) {
     case 'F': // F: forward
     case 'f':
       PIDMode = false;
+      internalStimType = 0;
       motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Forward ");
       Serial.print(arg1);
@@ -280,6 +298,7 @@ void interpretCommand(String message) {
     case 'R':
     case 'r':
       PIDMode = false;
+      internalStimType = 0;
       motor.move(REV, arg1/UNITS_PER_MICROSTEP);
       Serial.print("Moving Backward ");
       Serial.print(arg1);
@@ -292,6 +311,7 @@ void interpretCommand(String message) {
     case 'G': // G: Go to position
     case 'g':
       PIDMode = false;
+      internalStimType = 0;
       Serial.print("Moving to position ");
       Serial.println(arg1);
       motor.goTo(arg1/UNITS_PER_MICROSTEP);
@@ -304,6 +324,7 @@ void interpretCommand(String message) {
     case 'z':
       // reset position to limit switch
       PIDMode = false;
+      internalStimType = 0;
       Serial.println("Zeroing");
       motor.resetPos();
       currPos = 0;
@@ -314,6 +335,7 @@ void interpretCommand(String message) {
     case 'h':
       // reset position to limit switch
       PIDMode = false;
+      internalStimType = 0;
       Serial.print("Homing... ");
       motor.goUntil(RESET_ABSPOS, REV, goToLimitSpeed);
       while (motor.busyCheck()) {
@@ -332,31 +354,21 @@ void interpretCommand(String message) {
     case 'T': // T: Track position (PID mode)
     case 't':
       PIDMode = true;
+      internalStimType = 0;
       targetPos = arg1;
       currPos = motor.getPos() * UNITS_PER_MICROSTEP;
       error = (targetPos - currPos);
-      newVelocity = UpdatePID(&pidState, error, currPos);
-      // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-      if (newVelocity >= 0) {
-        motor.run(FWD, newVelocity);
-      } else {
-        motor.run(REV, -newVelocity);
-      }
+      updateTargetTime = micros();
       break;
 
     case 'E': // E: Track error (PID mode)
     case 'e':
       PIDMode = true;
+      internalStimType = 0;
       error = arg1;
       currPos = motor.getPos() * UNITS_PER_MICROSTEP;
       targetPos = currPos + error;
-      newVelocity = UpdatePID(&pidState, error, currPos);
-      // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-      if (newVelocity >= 0) {
-        motor.run(FWD, newVelocity);
-      } else {
-        motor.run(REV, -newVelocity);
-      }
+      updateTargetTime = micros();
       break;
 
     case 'W': // W: Report position ([W]here am I?)
@@ -391,6 +403,7 @@ void interpretCommand(String message) {
       targetPos = 0;
       currPos = 0;
       startStimTime = micros();
+      PIDMode = true;
       break;
 
     case '%': // '%' Track a square wave
@@ -399,6 +412,7 @@ void interpretCommand(String message) {
       targetPos = 0;
       currPos = 0;
       startStimTime = micros();
+      PIDMode = true;
       break;
 
     default: // unknown command
