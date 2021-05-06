@@ -81,8 +81,6 @@ void setup()
   // Start by setting up the pins and the SPI peripheral.
   //  The library doesn't do this for you!
   configSPI();
-  pinMode(CSPin, OUTPUT);
-  digitalWrite(CSPin, HIGH);
   configMotor(&motor);
 
   // reset alarms on both motors (to turn off (red) alarm LED
@@ -415,6 +413,8 @@ void configSPI() {
   pinMode(MOSI, OUTPUT);
   pinMode(MISO, INPUT);
   pinMode(SCKPin, OUTPUT);
+  pinMode(CSPin, OUTPUT);
+  digitalWrite(CSPin, HIGH);
   digitalWrite(resetPin, LOW);
   digitalWrite(resetPin, HIGH);
   SPI.begin();
