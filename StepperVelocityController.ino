@@ -3,7 +3,8 @@
 #include <SPI.h>
 #include "PID.h"
 
-// Motor setup
+// === Motor setup ===
+// The following settings are for the Pololu #1206 stepper
 const float Vsupply = 12;   // DC supply voltage
 const float Vmotor = 4.5;   // motor's nominal voltage (in V)
 const byte Ithresh = OCD_TH_1125mA; // over-current threshold
@@ -66,6 +67,7 @@ void setup()
   Serial.begin(115200);
 
   // Set P, I, and D gain values
+  // These PID values work for an unloaded Pololu #1206 stepper
   pidState.propGain = 25;     // proportional gain
   pidState.integratGain = 0;  // integral gain
   pidState.derGain = 25;    // derivative gain
@@ -125,10 +127,22 @@ void loop()
         error = (targetPos - currPos);
         newVelocity = UpdatePID(&pidState, error, currPos);
         // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-        if (newVelocity >= 0) {
+        if (abs(error)<0.1) {
+          motor.softStop();
+        } else if (newVelocity >= 0) {
           motor.run(FWD, newVelocity);
         } else {
           motor.run(REV, -newVelocity);
+        }
+        static int printCount = 0;
+        if ((++printCount % 5)==0) {
+          printCount == 0;
+          Serial.print(currPos);
+          Serial.print(" ");
+          Serial.print(targetPos);
+          Serial.print(" ");
+          Serial.print(error);
+          Serial.println(" 0 0 0 0");
         }
       }
       if (micros()-updateTargetTime > 16666) { // every 16.6 ms (60 Hz)
@@ -138,7 +152,7 @@ void loop()
           targetPos = sinAmp * sin(sinFreq*stimTime*2*3.141529);
         } else {
           targetPos = 0;
-          if ((stimTime>2)&&(stimTime<7)) targetPos = 180;
+          if ((stimTime>2)&&(stimTime<8)) targetPos = 180;
         }
       }
     }
@@ -379,37 +393,7 @@ void interpretCommand(String message) {
       targetPos = 0;
       currPos = 0;
       startStimTime = micros();
-
-    // {
-      // float freq = 1;
-      // int amp = 45;
-      // if (arg1>0) {freq = arg1;}
-      // for (int ii=1; ii<600; ii++) {
-      //   delay(15);
-      //   targetPos = amp * sin(freq*(float)ii/60*2*3.141529);
-      //   currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-      //   error = (targetPos - currPos);
-      //   Serial.print(currPos);
-      //   Serial.print(" ");
-      //   Serial.print(targetPos);
-      //   Serial.print(" ");
-      //   Serial.println(newVelocity);
-      //   // Serial.print(" ");
-      //   // Serial.println(error);
-      //   newVelocity = UpdatePID(&pidState, error, currPos);
-      //   // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-      //   // if (abs(error) < 1) {
-      //   //   motor.softStop();
-      //   // } else
-      //   if (newVelocity >= 0) {
-      //     motor.run(FWD, newVelocity);
-      //   } else {
-      //     motor.run(REV, -newVelocity);
-      //   }
-      // }
-      // motor.softStop();
-    // }
-    break;
+      break;
 
     case '%': // '%' Track a square wave
       internalStimType = 2;
@@ -417,34 +401,7 @@ void interpretCommand(String message) {
       targetPos = 0;
       currPos = 0;
       startStimTime = micros();
-    // {
-    //   for (int ii=1; ii<600; ii++) {
-    //     delay(15);
-    //     targetPos = 0;
-    //     if (ii/60>1) targetPos = 180;
-    //     if (ii/60>6) targetPos = 0;
-    //     currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-    //     error = (targetPos - currPos);
-    //     Serial.print(currPos);
-    //     Serial.print(" ");
-    //     Serial.print(targetPos);
-    //     Serial.print(" ");
-    //     Serial.print(newVelocity);
-    //     Serial.println(" 0 0 0 0");
-    //     newVelocity = UpdatePID(&pidState, error, currPos);
-    //     // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
-    //     // if (abs(error) < 1) {
-    //     //   motor.softStop();
-    //     // } else
-    //     if (newVelocity >= 0) {
-    //       motor.run(FWD, newVelocity);
-    //     } else {
-    //       motor.run(REV, -newVelocity);
-    //     }
-    //   }
-    //   motor.softStop();
-    // }
-    break;
+      break;
 
     default: // unknown command
       Serial.println("#"); // "#" means error
