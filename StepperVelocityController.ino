@@ -17,8 +17,8 @@ const float Khold = 0.5; // fraction of full voltage for holding
 // at accelRate up to (at most) maxSpeed.
 // Deceleration rate is also set to be accelRate.
 const int minSpeed = 160; // in steps/s;
-const int maxSpeed = 1000; // in steps/s
-const int accelRate = 5000; // in steps/s^2
+const int maxSpeed = 2500; // in steps/s
+const int accelRate = 25000; // in steps/s^2
 const int fullSpeed = 100; // in steps/s; use microsteps below this speed
 const float goToLimitSpeed = 500.0; // in steps/s
 
@@ -66,9 +66,9 @@ void setup()
   Serial.begin(115200);
 
   // Set P, I, and D gain values
-  pidState.propGain = 1;     // proportional gain
+  pidState.propGain = 25;     // proportional gain
   pidState.integratGain = 0;  // integral gain
-  pidState.derGain = 0;    // derivative gain
+  pidState.derGain = 25;    // derivative gain
   // Limit integrator values to avoid windup (due to reaching motor's top velocity)
   pidState.integratMax = 1000;  // Maximum and minimum
   pidState.integratMin = -1000;  // allowable integrator state
@@ -90,6 +90,14 @@ void setup()
   motor.getAlarmStatusString();
 }
 
+// For tracking internally generated stimuli
+unsigned long startStimTime = 0;
+unsigned long updateVelTime = 0;
+unsigned long updateTargetTime = 0;
+int internalStimType = 0;
+float sinAmp = 90;
+float sinFreq = 1;
+
 unsigned long prevTime = micros();
 bool motorBusy = false;
 bool prevMotorBusy = false;
@@ -104,6 +112,37 @@ void loop()
 
   readUSB();
 
+  if (internalStimType > 0) {
+    if (micros()-startStimTime > 1e7) {
+      internalStimType = 0;
+      motor.softStop();
+      motor.resetPos();
+    } else {
+      if (micros()-updateVelTime > 1000) { // every 1 ms
+        updateVelTime = micros();
+        // update velocity
+        currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+        error = (targetPos - currPos);
+        newVelocity = UpdatePID(&pidState, error, currPos);
+        // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
+        if (newVelocity >= 0) {
+          motor.run(FWD, newVelocity);
+        } else {
+          motor.run(REV, -newVelocity);
+        }
+      }
+      if (micros()-updateTargetTime > 16666) { // every 16.6 ms (60 Hz)
+        updateTargetTime = micros();
+        float stimTime = (float)(micros() - startStimTime)/1e6; // stim time in sec
+        if (internalStimType == 1) {
+          targetPos = sinAmp * sin(sinFreq*stimTime*2*3.141529);
+        } else {
+          targetPos = 0;
+          if ((stimTime>2)&&(stimTime<7)) targetPos = 180;
+        }
+      }
+    }
+  }
 }
 
 void readUSB() {
@@ -150,13 +189,13 @@ void interpretCommand(String message) {
     case 'S': // S: set max speed
     case 's':
       if (noArg) {
-        Serial.print("Max speed: ");
+        Serial.print("MaxSpeed: ");
         Serial.print(motor.getMaxSpeed());
         Serial.println(" steps/s");
       } else {
         motor.setMaxSpeed(arg1);
-        Serial.print("Max speed set to ");
-        Serial.print(arg1);
+        Serial.print("MaxSpeed: ");
+        Serial.print(motor.getMaxSpeed());
         Serial.println(" steps/s");
       }
       break;
@@ -164,14 +203,14 @@ void interpretCommand(String message) {
     case 'A': // A: set accel rate
     case 'a':
       if (noArg) {
-        Serial.print("Accel rate: ");
+        Serial.print("AccelRate: ");
         Serial.print(motor.getAcc());
         Serial.println(" steps/s^2");
       } else {
         motor.setAcc(arg1);
         motor.setDec(arg1);
-        Serial.print("Speed accel rate to ");
-        Serial.print(arg1);
+        Serial.print("AccelRate: ");
+        Serial.print(motor.getAcc());
         Serial.println(" steps/s^2");
       }
       break;
@@ -331,6 +370,81 @@ void interpretCommand(String message) {
     case '$': // '$' re-configure motor
       configMotor(&motor);
       break;
+
+    case '#': // '#' Track a sine wave
+      sinFreq = 1;
+      if (arg1>0) {sinFreq = arg1;}
+      internalStimType = 1;
+      motor.resetPos();
+      targetPos = 0;
+      currPos = 0;
+      startStimTime = micros();
+
+    // {
+      // float freq = 1;
+      // int amp = 45;
+      // if (arg1>0) {freq = arg1;}
+      // for (int ii=1; ii<600; ii++) {
+      //   delay(15);
+      //   targetPos = amp * sin(freq*(float)ii/60*2*3.141529);
+      //   currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+      //   error = (targetPos - currPos);
+      //   Serial.print(currPos);
+      //   Serial.print(" ");
+      //   Serial.print(targetPos);
+      //   Serial.print(" ");
+      //   Serial.println(newVelocity);
+      //   // Serial.print(" ");
+      //   // Serial.println(error);
+      //   newVelocity = UpdatePID(&pidState, error, currPos);
+      //   // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
+      //   // if (abs(error) < 1) {
+      //   //   motor.softStop();
+      //   // } else
+      //   if (newVelocity >= 0) {
+      //     motor.run(FWD, newVelocity);
+      //   } else {
+      //     motor.run(REV, -newVelocity);
+      //   }
+      // }
+      // motor.softStop();
+    // }
+    break;
+
+    case '%': // '%' Track a square wave
+      internalStimType = 2;
+      motor.resetPos();
+      targetPos = 0;
+      currPos = 0;
+      startStimTime = micros();
+    // {
+    //   for (int ii=1; ii<600; ii++) {
+    //     delay(15);
+    //     targetPos = 0;
+    //     if (ii/60>1) targetPos = 180;
+    //     if (ii/60>6) targetPos = 0;
+    //     currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+    //     error = (targetPos - currPos);
+    //     Serial.print(currPos);
+    //     Serial.print(" ");
+    //     Serial.print(targetPos);
+    //     Serial.print(" ");
+    //     Serial.print(newVelocity);
+    //     Serial.println(" 0 0 0 0");
+    //     newVelocity = UpdatePID(&pidState, error, currPos);
+    //     // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
+    //     // if (abs(error) < 1) {
+    //     //   motor.softStop();
+    //     // } else
+    //     if (newVelocity >= 0) {
+    //       motor.run(FWD, newVelocity);
+    //     } else {
+    //       motor.run(REV, -newVelocity);
+    //     }
+    //   }
+    //   motor.softStop();
+    // }
+    break;
 
     default: // unknown command
       Serial.println("#"); // "#" means error
