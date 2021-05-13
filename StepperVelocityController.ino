@@ -55,7 +55,9 @@ SPid pidState;
 const int resetPin = 4;
 const int SCKPin = 13;
 const int CSPin = A2;
-XNucleoStepper motor(0, CSPin, resetPin);
+const int busyPin = A5;
+const int flagPin = A4;
+XNucleoStepper motor(0, CSPin, resetPin, busyPin);
 
 void DEBUG(String message) {
   // Serial.println(message.c_str()); // comment this out when not debugging !!!!!!!
@@ -83,6 +85,10 @@ void setup()
   configSPI();
   configMotor(&motor);
 
+  // // Try to use stall detection
+  // // 2021-05-13 OM: Can't get it working well. Skipping for now.
+  // motor.setParam(STALL_TH, 26); // values from 0-127; represent 31.25 mA – 4 A
+
   // reset alarms on both motors (to turn off (red) alarm LED
   // on XNucleo board)
   XNucleoStepper motor2(1, CSPin, resetPin);
@@ -109,6 +115,11 @@ void loop()
   // DEBUG(String(micros()-prevTime));
   // delay(100);
   // prevTime = micros();
+
+  // 0) Check for flags
+  if (digitalRead(flagPin)==LOW) {
+    Serial.println(motor.getAlarmStatusString());
+  }
 
   // 1) Read and interpret new Serial commands
   readUSB();
