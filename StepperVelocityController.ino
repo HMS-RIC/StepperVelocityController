@@ -119,6 +119,9 @@ void loop()
   // 0) Check for flags
   if (digitalRead(flagPin)==LOW) {
     Serial.println(motor.getAlarmStatusString());
+    PIDMode = false;
+    internalStimType = 0;
+    motor.softStop();
   }
 
   // 1) Read and interpret new Serial commands
