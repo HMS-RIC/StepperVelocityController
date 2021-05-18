@@ -4,24 +4,35 @@
 #include "PID.h"
 
 // === Motor setup ===
-// The following settings are for the Pololu #1206 stepper
+
+// // ## The following settings are for the Pololu #1206 stepper (670mA @ 4.5V)
+// const float Vsupply = 12;   // DC supply voltage
+// const float Vmotor = 4.5;   // motor's nominal voltage (in V)
+// const byte Ithresh = OCD_TH_1125mA; // over-current threshold
+// // Velocity/accleration profile:
+// // From stop, motor will first jump to minSpeed, then accelerate
+// // at accelRate up to (at most) maxSpeed.
+// // Deceleration rate is also set to be accelRate.
+// const int minSpeed = 160; // in steps/s;
+// const int maxSpeed = 2500; // in steps/s
+// const int accelRate = 25000; // in steps/s^2
+// const int fullSpeed = 100; // in steps/s; use microsteps below this speed
+// const float goToLimitSpeed = maxSpeed; // in steps/s
+
+// ## The following settings are for the OpenBuilds NEMA17 (1.68A @ 2.77V) stepper
 const float Vsupply = 12;   // DC supply voltage
-const float Vmotor = 4.5;   // motor's nominal voltage (in V)
-const byte Ithresh = OCD_TH_1125mA; // over-current threshold
-
-const float Kaccl = 1.2; // fraction of full voltage for acceleration
-const float Krun  = 1.0; // fraction of full voltage for const. vel.
-const float Khold = 0.5; // fraction of full voltage for holding
-
+const float Vmotor = 2.77;   // motor's nominal voltage (in V)
+const byte Ithresh = OCD_TH_2625mA; // over-current threshold (or use OCD_TH_2250mA)
 // Velocity/accleration profile:
 // From stop, motor will first jump to minSpeed, then accelerate
 // at accelRate up to (at most) maxSpeed.
 // Deceleration rate is also set to be accelRate.
 const int minSpeed = 160; // in steps/s;
-const int maxSpeed = 2500; // in steps/s
-const int accelRate = 25000; // in steps/s^2
-const int fullSpeed = 100; // in steps/s; use microsteps below this speed
-const float goToLimitSpeed = 500.0; // in steps/s
+const int maxSpeed = 500; // in steps/s
+const int accelRate = 1000; // in steps/s^2
+const int fullSpeed = 5000; // in steps/s; use microsteps below this speed
+const float goToLimitSpeed = maxSpeed; // in steps/s
+
 
 
 // Conversion from steps to physical units (cm, degrees, pixels, etc...):
@@ -37,6 +48,11 @@ const float UNITS_PER_MOTOR_REV = 360;
 // We can compute our conversion factor:
 const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / MICROSTEPS_PER_MOTOR_REV;
 
+
+// Extra boost for acceleration; Reduce power for holding still
+const float Kaccl = 1.2; // fraction of full voltage for acceleration
+const float Krun  = 1.0; // fraction of full voltage for const. vel.
+const float Khold = 0.5; // fraction of full voltage for holding
 
 
 // PID / Targetting
