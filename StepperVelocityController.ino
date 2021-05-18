@@ -219,7 +219,8 @@ void interpretCommand(String message) {
   parameters.trim();
 
   float arg1 = parameters.toFloat();
-  bool noArg = (parameters.length() == 0);
+  // Does this command have an argument?
+  bool hasArg = (parameters.length() == 0);
 
   DEBUG(String("Command: ")+command);
   DEBUG(String("Argument 1: ")+arg1);
@@ -229,52 +230,55 @@ void interpretCommand(String message) {
 
     case 'S': // S: set max speed
     case 's':
-      if (noArg) {
-        Serial.print("MaxSpeed: ");
-        Serial.print(motor.getMaxSpeed());
-        Serial.println(" steps/s");
-      } else {
+      if (hasArg) {
         motor.setMaxSpeed(arg1);
-        Serial.print("MaxSpeed: ");
-        Serial.print(motor.getMaxSpeed());
-        Serial.println(" steps/s");
+        Serial.print("Setting ");
       }
+      Serial.print("MaxSpeed: ");
+      Serial.print(motor.getMaxSpeed());
+      Serial.println(" steps/s");
       break;
 
     case 'A': // A: set accel rate
     case 'a':
-      if (noArg) {
-        Serial.print("AccelRate: ");
-        Serial.print(motor.getAcc());
-        Serial.println(" steps/s^2");
-      } else {
+      if (hasArg) {
         motor.setAcc(arg1);
         motor.setDec(arg1);
-        Serial.print("AccelRate: ");
-        Serial.print(motor.getAcc());
-        Serial.println(" steps/s^2");
+        Serial.print("Setting ");
       }
+      Serial.print("AccelRate: ");
+      Serial.print(motor.getAcc());
+      Serial.println(" steps/s^2");
       break;
 
     case 'P': // P: set P gain
     case 'p':
-      pidState.propGain = arg1;
-      Serial.print("Set P gain to ");
-      Serial.println(arg1);
+      if (hasArg) {
+        pidState.propGain = arg1;
+        Serial.print("Setting ");
+      }
+      Serial.print("P-gain: ");
+      Serial.println(pidState.propGain);
       break;
 
     case 'I': // I: set I gain
     case 'i':
-      pidState.integratGain = arg1;
-      Serial.print("Set I gain to ");
-      Serial.println(arg1);
+    if (hasArg) {
+        pidState.integratGain = arg1;
+        Serial.print("Setting ");
+      }
+      Serial.print("I-gain: ");
+      Serial.println(pidState.integratGain);
       break;
 
     case 'D': // D: set D gain
     case 'd':
-      pidState.derGain = arg1;
-      Serial.print("Set D gain to ");
-      Serial.println(arg1);
+    if (hasArg) {
+        pidState.derGain = arg1;
+        Serial.print("Setting ");
+      }
+      Serial.print("D-gain: ");
+      Serial.println(pidState.derGain);
       break;
 
 
