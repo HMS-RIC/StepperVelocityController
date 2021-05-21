@@ -1,6 +1,7 @@
 #include "src/XNucleoDualStepperDriver/XNucleoDualStepperDriver.h"
 #include "src/XNucleoDualStepperDriver/dSPINConstants.h"
 #include <SPI.h>
+#include <math.h>
 #include "PID.h"
 
 // === Motor setup ===
@@ -44,10 +45,16 @@ const int FULL_STEPS_PER_MOTOR_REV = 200;
 const int stepMode = STEP_FS_8; // no microsteps
 const int MICROSTEPS_PER_MOTOR_REV = 8 * FULL_STEPS_PER_MOTOR_REV;
 // How many phyical units of translation in one complete motor revolution?
+//    (Units could be pixels, mm, degrees, etc...)
 const float UNITS_PER_MOTOR_REV = 360;
 // We can compute our conversion factor:
-const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / MICROSTEPS_PER_MOTOR_REV;
+const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / (float)MICROSTEPS_PER_MOTOR_REV;
 
+// Are we on a circular path or linear?
+const bool isCircular = true;
+// If circular, how long is the track (in physical units)?
+//    (E.g. 360 deg?  30 mm circumference, etc)
+const float circTracLength = 360;
 
 // Extra boost for acceleration; Reduce power for holding still
 const float Kaccl = 1.2; // fraction of full voltage for acceleration
@@ -163,6 +170,8 @@ void loop()
         if ((stimTime>2)&&(stimTime<8)) targetPos = 180;
       }
     }
+    // normalize to circular track if needed
+    targetPos = normalizePos(targetPos);
   }
 
   // 4) Stop tracking if stopped and last update was > 1s ago
@@ -177,8 +186,8 @@ void loop()
 
 void track() {
   // update velocity
-  currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-  error = (targetPos - currPos);
+  currPos = getCurrPos();
+  error = posDiff(targetPos, currPos);
   newVelocity = UpdatePID(&pidState, error, currPos);
   // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
   if (abs(error)<0.1) {
@@ -240,7 +249,7 @@ void interpretCommand(String message) {
 
   DEBUG(String("Command: ")+command);
   DEBUG(String("Argument 1: ")+arg1);
-  if (noArg) DEBUG("-- No Arg --");
+  if (!hasArg) DEBUG("-- No Arg --");
 
   switch (command) {
 
@@ -348,7 +357,12 @@ void interpretCommand(String message) {
       internalStimType = 0;
       Serial.print("Moving to position ");
       Serial.println(arg1);
+      // // DEBUG:
+      // Serial.print("  [ motor.goTo(");
+      // Serial.print(arg1/UNITS_PER_MICROSTEP);
+      // Serial.println(") ]");
       motor.goTo(arg1/UNITS_PER_MICROSTEP);
+      // TODO: deal with circular track here....
       // while (motor.busyCheck()) {
       //   delay(1);
       // }
@@ -390,8 +404,9 @@ void interpretCommand(String message) {
       PIDMode = true;
       internalStimType = 0;
       targetPos = arg1;
-      currPos = motor.getPos() * UNITS_PER_MICROSTEP;
-      error = (targetPos - currPos);
+      targetPos = normalizePos(targetPos);
+      currPos = getCurrPos();
+      error = posDiff(targetPos, currPos);
       updateTargetTime = micros();
       break;
 
@@ -400,15 +415,16 @@ void interpretCommand(String message) {
       PIDMode = true;
       internalStimType = 0;
       error = arg1;
-      currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+      currPos = getCurrPos();
       targetPos = currPos + error;
+      targetPos = normalizePos(targetPos);
       updateTargetTime = micros();
       break;
 
     case 'W': // W: Report position ([W]here am I?)
     case 'w':
       currSteps = motor.getPos();
-      currPos = currSteps * UNITS_PER_MICROSTEP;
+      currPos = getCurrPos();
       Serial.print("Current location: ");
       Serial.print(currPos);
       Serial.print("\t\t (");
@@ -455,6 +471,36 @@ void interpretCommand(String message) {
 
   DEBUG(String("Time: ")+(micros()-startCommandTime));
 }
+
+// Get current position in physical units. Correct for circular track, if needed.
+float getCurrPos() {
+  float currPos = motor.getPos() * UNITS_PER_MICROSTEP;
+  currPos = normalizePos(currPos);
+  return currPos;
+}
+
+// Normalize track position for a circular track (i.e., convert to range [0 circTrackLength])
+float normalizePos(float pos) {
+  if (isCircular) {
+    pos = fmod(pos, circTracLength);
+    if (pos < 0) pos += circTracLength;
+  }
+  return pos;
+}
+
+// Compute difference in positions (A-B), correcting for circular track if needed
+// In a circular track this calue is normalized to [-halfTrackLength +halfTrackLength]
+const float halfTrackLength = circTracLength/2;
+float posDiff(float posA, float posB) {
+  float diff = posA - posB;
+  if (isCircular) {
+    diff = fmod(diff, circTracLength);
+    if (diff > halfTrackLength) diff -= circTracLength;
+    if (diff < -halfTrackLength) diff += circTracLength;
+  }
+  return diff;
+}
+
 
 void configSPI() {
   pinMode(resetPin, OUTPUT);
