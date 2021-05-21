@@ -6,33 +6,33 @@
 
 // === Motor setup ===
 
-// // ## The following settings are for the Pololu #1206 stepper (670mA @ 4.5V)
-// const float Vsupply = 12;   // DC supply voltage
-// const float Vmotor = 4.5;   // motor's nominal voltage (in V)
-// const byte Ithresh = OCD_TH_1125mA; // over-current threshold
-// // Velocity/accleration profile:
-// // From stop, motor will first jump to minSpeed, then accelerate
-// // at accelRate up to (at most) maxSpeed.
-// // Deceleration rate is also set to be accelRate.
-// const int minSpeed = 160; // in steps/s;
-// const int maxSpeed = 2500; // in steps/s
-// const int accelRate = 25000; // in steps/s^2
-// const int fullSpeed = 100; // in steps/s; use microsteps below this speed
-// const float goToLimitSpeed = maxSpeed; // in steps/s
-
-// ## The following settings are for the OpenBuilds NEMA17 (1.68A @ 2.77V) stepper
+// ## The following settings are for the Pololu #1206 stepper (670mA @ 4.5V)
 const float Vsupply = 12;   // DC supply voltage
-const float Vmotor = 2.77;   // motor's nominal voltage (in V)
-const byte Ithresh = OCD_TH_2625mA; // over-current threshold (or use OCD_TH_2250mA)
+const float Vmotor = 4.5;   // motor's nominal voltage (in V)
+const byte Ithresh = OCD_TH_1125mA; // over-current threshold
 // Velocity/accleration profile:
 // From stop, motor will first jump to minSpeed, then accelerate
 // at accelRate up to (at most) maxSpeed.
 // Deceleration rate is also set to be accelRate.
 const int minSpeed = 160; // in steps/s;
-const int maxSpeed = 500; // in steps/s
-const int accelRate = 1000; // in steps/s^2
-const int fullSpeed = 5000; // in steps/s; use microsteps below this speed
+const int maxSpeed = 2500; // in steps/s
+const int accelRate = 25000; // in steps/s^2
+const int fullSpeed = 100; // in steps/s; use microsteps below this speed
 const float goToLimitSpeed = maxSpeed; // in steps/s
+
+// // ## The following settings are for the OpenBuilds NEMA17 (1.68A @ 2.77V) stepper
+// const float Vsupply = 12;   // DC supply voltage
+// const float Vmotor = 2.77;   // motor's nominal voltage (in V)
+// const byte Ithresh = OCD_TH_2625mA; // over-current threshold (or use OCD_TH_2250mA)
+// // Velocity/accleration profile:
+// // From stop, motor will first jump to minSpeed, then accelerate
+// // at accelRate up to (at most) maxSpeed.
+// // Deceleration rate is also set to be accelRate.
+// const int minSpeed = 160; // in steps/s;
+// const int maxSpeed = 500; // in steps/s
+// const int accelRate = 1000; // in steps/s^2
+// const int fullSpeed = 5000; // in steps/s; use microsteps below this speed
+// const float goToLimitSpeed = maxSpeed; // in steps/s
 
 
 
@@ -51,7 +51,7 @@ const float UNITS_PER_MOTOR_REV = 360;
 const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / (float)MICROSTEPS_PER_MOTOR_REV;
 
 // Are we on a circular path or linear?
-const bool isCircular = true;
+const bool isCircular = false;
 // If circular, how long is the track (in physical units)?
 //    (E.g. 360 deg?  30 mm circumference, etc)
 const float circTracLength = 360;
