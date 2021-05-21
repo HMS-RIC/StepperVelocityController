@@ -175,7 +175,7 @@ void loop()
   }
 
   // 4) Stop tracking if stopped and last update was > 1s ago
-  if (micros()-updateTargetTime > 1e6) {
+  if (PIDMode && (micros()-updateTargetTime > 1e6)) {
     if (abs(error)<0.1) {
       PIDMode = false;
       internalStimType = 0;
@@ -250,6 +250,9 @@ void interpretCommand(String message) {
   DEBUG(String("Command: ")+command);
   DEBUG(String("Argument 1: ")+arg1);
   if (!hasArg) DEBUG("-- No Arg --");
+
+  // initialize variables needed in switch
+  float gotoPos, gotoMovement;
 
   switch (command) {
 
@@ -327,13 +330,17 @@ void interpretCommand(String message) {
     case 'f':
       PIDMode = false;
       internalStimType = 0;
-      motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
+      if (arg1 >= 0) {
+        motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
+      } else {
+        motor.move(REV, -arg1/UNITS_PER_MICROSTEP);
+      }
       Serial.print("Moving Forward ");
       Serial.print(arg1);
       Serial.println(" units");
-      while (motor.busyCheck()) {
-        delay(1);
-      }
+      // while (motor.busyCheck()) {
+      //   delay(1);
+      // }
       break;
 
     case 'B': // B/R: Reverse
@@ -342,13 +349,17 @@ void interpretCommand(String message) {
     case 'r':
       PIDMode = false;
       internalStimType = 0;
-      motor.move(REV, arg1/UNITS_PER_MICROSTEP);
+      if (arg1 >= 0) {
+        motor.move(REV, arg1/UNITS_PER_MICROSTEP);
+      } else {
+        motor.move(FWD, -arg1/UNITS_PER_MICROSTEP);
+      }
       Serial.print("Moving Backward ");
       Serial.print(arg1);
       Serial.println(" units");
-      while (motor.busyCheck()) {
-        delay(1);
-      }
+      // while (motor.busyCheck()) {
+      //   delay(1);
+      // }
       break;
 
     case 'G': // G: Go to position
@@ -357,12 +368,18 @@ void interpretCommand(String message) {
       internalStimType = 0;
       Serial.print("Moving to position ");
       Serial.println(arg1);
-      // // DEBUG:
-      // Serial.print("  [ motor.goTo(");
-      // Serial.print(arg1/UNITS_PER_MICROSTEP);
-      // Serial.println(") ]");
-      motor.goTo(arg1/UNITS_PER_MICROSTEP);
-      // TODO: deal with circular track here....
+      // This won't work with circular track:
+      //  motor.goTo(arg1/UNITS_PER_MICROSTEP);
+      // Do this instead:
+      gotoPos = arg1;
+      gotoPos = normalizePos(gotoPos);
+      currPos = getCurrPos();
+      gotoMovement = posDiff(gotoPos, currPos);
+      if (gotoMovement >= 0) {
+        motor.move(FWD, gotoMovement/UNITS_PER_MICROSTEP);
+      } else {
+        motor.move(REV, -gotoMovement/UNITS_PER_MICROSTEP);
+      }
       // while (motor.busyCheck()) {
       //   delay(1);
       // }
