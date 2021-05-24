@@ -63,7 +63,8 @@ const float Khold = 0.5; // fraction of full voltage for holding
 
 
 // PID / Targetting
-bool PIDMode = false;
+bool trackingMode = false;
+bool recentAlarm = false;
 float currPos = 0;
 long currSteps = 0;
 float targetPos = 0;
@@ -142,7 +143,8 @@ void loop()
   // 0) Check for flags
   if (digitalRead(flagPin)==LOW) {
     Serial.println(motor.getAlarmStatusString());
-    PIDMode = false;
+    recentAlarm = true;
+    trackingMode = false;
     internalStimType = 0;
     motor.softStop();
   }
@@ -150,8 +152,8 @@ void loop()
   // 1) Read and interpret new Serial commands
   readUSB();
 
-  // 2) Track target (if in PIDMode)
-  if (PIDMode) {
+  // 2) Track target (if in trackingMode)
+  if (trackingMode) {
     if (micros()-updateVelTime > 1000) { // every 1 ms
       updateVelTime = micros();
       track();
@@ -175,9 +177,9 @@ void loop()
   }
 
   // 4) Stop tracking if stopped and last update was > 1s ago
-  if (PIDMode && (micros()-updateTargetTime > 1e6)) {
+  if (trackingMode && (micros()-updateTargetTime > 1e6)) {
     if (abs(error)<0.1) {
-      PIDMode = false;
+      trackingMode = false;
       internalStimType = 0;
       motor.softStop();
     }
@@ -312,7 +314,8 @@ void interpretCommand(String message) {
 
     case 'X': // X: soft stop
     case 'x':
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       motor.softStop();
       Serial.println("Stopping");
@@ -320,7 +323,8 @@ void interpretCommand(String message) {
 
     case 'Q': // Q: Hi-Z (free movements)
     case 'q':
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       motor.softHiZ();
       Serial.println("High-Z (free movement)");
@@ -328,7 +332,8 @@ void interpretCommand(String message) {
 
     case 'F': // F: forward
     case 'f':
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       if (arg1 >= 0) {
         motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
@@ -347,7 +352,8 @@ void interpretCommand(String message) {
     case 'b':
     case 'R':
     case 'r':
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       if (arg1 >= 0) {
         motor.move(REV, arg1/UNITS_PER_MICROSTEP);
@@ -364,7 +370,8 @@ void interpretCommand(String message) {
 
     case 'G': // G: Go to position
     case 'g':
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       Serial.print("Moving to position ");
       Serial.println(arg1);
@@ -388,7 +395,8 @@ void interpretCommand(String message) {
     case 'Z': // Z: Re-zero at current position
     case 'z':
       // reset position to limit switch
-      PIDMode = false;
+      trackingMode = false;
+      recentAlarm = false;
       internalStimType = 0;
       Serial.println("Zeroing");
       motor.resetPos();
@@ -398,44 +406,50 @@ void interpretCommand(String message) {
 
     case 'H': // H: Home — reset zero position at limit switch
     case 'h':
-      // reset position to limit switch
-      PIDMode = false;
-      internalStimType = 0;
-      Serial.print("Homing... ");
-      motor.goUntil(RESET_ABSPOS, REV, goToLimitSpeed);
-      while (motor.busyCheck()) {
-        delay(1);
+      // (don't go home if there was a recent alarm - limit switch may already be pressed)
+      if (!recentAlarm) {
+        trackingMode = false;
+        internalStimType = 0;
+        Serial.print("Homing... ");
+        motor.goUntil(RESET_ABSPOS, REV, goToLimitSpeed);
+        while (motor.busyCheck()) {
+          delay(1);
+        }
+        motor.releaseSw(RESET_ABSPOS, FWD);
+        while (motor.busyCheck()) {
+          delay(1);
+        }
+        motor.resetPos();
+        currPos = 0;
+        targetPos = 0;
+        Serial.println("Done");
       }
-      motor.releaseSw(RESET_ABSPOS, FWD);
-      while (motor.busyCheck()) {
-        delay(1);
-      }
-      motor.resetPos();
-      currPos = 0;
-      targetPos = 0;
-      Serial.println("Done");
       break;
 
     case 'T': // T: Track position (PID mode)
     case 't':
-      PIDMode = true;
-      internalStimType = 0;
-      targetPos = arg1;
-      targetPos = normalizePos(targetPos);
-      currPos = getCurrPos();
-      error = posDiff(targetPos, currPos);
-      updateTargetTime = micros();
+      if (!recentAlarm) {
+        trackingMode = true;
+        internalStimType = 0;
+        targetPos = arg1;
+        targetPos = normalizePos(targetPos);
+        currPos = getCurrPos();
+        error = posDiff(targetPos, currPos);
+        updateTargetTime = micros();
+      }
       break;
 
     case 'E': // E: Track error (PID mode)
     case 'e':
-      PIDMode = true;
-      internalStimType = 0;
-      error = arg1;
-      currPos = getCurrPos();
-      targetPos = currPos + error;
-      targetPos = normalizePos(targetPos);
-      updateTargetTime = micros();
+      if (!recentAlarm) {
+        trackingMode = true;
+        internalStimType = 0;
+        error = arg1;
+        currPos = getCurrPos();
+        targetPos = currPos + error;
+        targetPos = normalizePos(targetPos);
+        updateTargetTime = micros();
+      }
       break;
 
     case 'W': // W: Report position ([W]here am I?)
@@ -463,23 +477,27 @@ void interpretCommand(String message) {
       break;
 
     case '#': // '#' Track a sine wave
-      sinFreq = 1;
-      if (arg1>0) {sinFreq = arg1;}
-      internalStimType = 1;
-      motor.resetPos();
-      targetPos = 0;
-      currPos = 0;
-      startStimTime = micros();
-      PIDMode = true;
+      if (!recentAlarm) {
+        sinFreq = 1;
+        if (arg1>0) {sinFreq = arg1;}
+        internalStimType = 1;
+        motor.resetPos();
+        targetPos = 0;
+        currPos = 0;
+        startStimTime = micros();
+        trackingMode = true;
+      }
       break;
 
     case '%': // '%' Track a square wave
-      internalStimType = 2;
-      motor.resetPos();
-      targetPos = 0;
-      currPos = 0;
-      startStimTime = micros();
-      PIDMode = true;
+      if (!recentAlarm) {
+        internalStimType = 2;
+        motor.resetPos();
+        targetPos = 0;
+        currPos = 0;
+        startStimTime = micros();
+        trackingMode = true;
+      }
       break;
 
     default: // unknown command
