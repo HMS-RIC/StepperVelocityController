@@ -25,11 +25,64 @@ All Serial commands consist of a single-character command, followed by an option
 
 |Command(s)|Description|
 |---|---|
-|`S`,`A` \<no arg\>| Print `S` max speed or `A` acceleration rate |
-|`S`,`A` \<value\>| Set `S` max speed or `A` acceleration rate |
+|`S`, `A` | Print max speed (`S`) or acceleration rate (`A`) |
+|`S`, `A` \<value\>| Set max speed (`S`) or acceleration rate (`A`) |
+|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking |
+||(For many setups, leaving `I` and `D` set to 0 should suffice.)|
+|`X` | Stop motor |
+|`Q` | Stop motor, Hi-Z mode (allows free movement of the motor) |
+|`F` \<distance\>| Move forward the specified distance |
+|`B`, `R` \<distance\>| Move backwards the specified distance |
+|`G` \<position\>| Go to the specified position |
+|`W` | Print current position ("Where am I?")|
+|`Z` | Re-zero: Set current position to be 0 |
+|`H` | Home: Move backwards until limit switch is triggered, then re-zero |
+||**Tracking Mode** (PID Mode)|
+|`T` \<position\> | Update target position for tracking |
+|`E` \<error\> | Update instantaneous tracking error |
+||**Troubleshooting**|
+|`?` | Report motor status |
+|`!` | Check for alarm flags |
+|`$` | Reset motor configuration |
+|`#` \<freq\>| Track a sine wave with frequency speficied in Hz (default: 1 Hz)|
+
+
+NOTE: All distances, errors, and absolute positions are specified in *physical units* of your choosing (e.g., degrees, mm, pixels, etc.) which are set up in the code.
+
+### Tracking Mode
+The motor can track to a dynamically updated target position. The *Track* (`T`) and *Error* (`E`) commands are designed to be called at a regular frequency, e.g., 30 Hz, to update the internal tracking target. The motor velocity is constantly updated to track the current target position.
+
+The `T` command directly updates target position, while the `E` command specifies the current error value (i.e., the difference between the current motor position and the new target position).
 
 ### Examples
 
-`G 90`: Go to the absolute position 90 units
-`F 220`: Move forward 220 units
+- `G 90`: Go to the absolute position 90
+- `F 220`: Move forward by 220 units
+- `W`: Print current position
+- `R 20; Z;` Move backwards by 20, then re-zero
+
+####Tracking pseudo-code
+```C
+// Keep an LED centered on a moving object
+while (true) {
+	frame = AcquireNewCameraFrame();
+	// get x position of object
+	x = GetXPositionOfTrackedObject(frame);
+	// Update LED motor's tracking target :
+	SerialCommandToArduino("T <X>");
+}
+```
+
+```C
+// Move camera gantry to center an object (e.g., at position x=0)
+while (true) {
+	frame = AcquireNewCameraFrame();
+	// get positional error
+	error = GetXPositionOfTrackedObject(frame);
+	// Move camera gantry to cancel error:
+	SerialCommandToArduino("E <error>");
+}
+```
+
+
 
