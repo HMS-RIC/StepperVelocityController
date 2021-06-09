@@ -4,12 +4,18 @@
 #include <math.h>
 #include "PID.h"
 
-// === Motor setup ===
+// ###### Customize these variables for your setup ######
+
+// === 1) Motor setup ===
 
 // ## The following settings are for the Pololu #1206 stepper (670mA @ 4.5V)
 const float Vsupply = 12;   // DC supply voltage
 const float Vmotor = 4.5;   // motor's nominal voltage (in V)
+
 const byte Ithresh = OCD_TH_1125mA; // over-current threshold
+                                    // Set this to be somewhat larger than the motor's rated current.
+                                    // (see src/XNucleo.../dSPINConstants.h for list of possible values)
+
 // Velocity/accleration profile:
 // From stop, motor will first jump to minSpeed, then accelerate
 // at accelRate up to (at most) maxSpeed.
@@ -35,6 +41,7 @@ const float goToLimitSpeed = maxSpeed; // in steps/s
 // const float goToLimitSpeed = maxSpeed; // in steps/s
 
 
+// === 2) Conversion to physical units ===
 
 // Conversion from steps to physical units (cm, degrees, pixels, etc...):
 // ======================================================================
@@ -56,11 +63,16 @@ const bool isCircular = false;
 //    (E.g. 360 deg?  30 mm circumference, etc)
 const float circTracLength = 360;
 
+
+// ###### End user-customizable variables ######
+// #############################################
+
+
+
 // Extra boost for acceleration; Reduce power for holding still
 const float Kaccl = 1.2; // fraction of full voltage for acceleration
 const float Krun  = 1.0; // fraction of full voltage for const. vel.
 const float Khold = 0.5; // fraction of full voltage for holding
-
 
 // PID / Targetting
 bool trackingMode = false;
@@ -96,7 +108,7 @@ void setup()
   // These PID values work for an unloaded Pololu #1206 stepper
   pidState.propGain = 25;     // proportional gain
   pidState.integratGain = 0;  // integral gain
-  pidState.derGain = 25;    // derivative gain
+  pidState.derGain = 0;    // derivative gain
   // Limit integrator values to avoid windup (due to reaching motor's top velocity)
   pidState.integratMax = 1000;  // Maximum and minimum
   pidState.integratMin = -1000;  // allowable integrator state
@@ -135,7 +147,6 @@ unsigned long prevDebugTime = micros();
 void loop()
 {
   // debugging code to get loop time:
-  //    (as of 1/2017 loop takes ~32 microseconds)
   // DEBUG(String(micros()-prevTime));
   // delay(100);
   // prevTime = micros();
