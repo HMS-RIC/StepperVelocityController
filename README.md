@@ -27,8 +27,7 @@ All Serial commands consist of a single-character command, followed by an option
 |---|---|
 |`S`, `A` | Print max speed (`S`) or acceleration rate (`A`) |
 |`S`, `A` \<value\>| Set max speed (`S`) or acceleration rate (`A`) |
-|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking |
-||(For many setups, leaving `I` and `D` set to 0 should suffice.)|
+|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking <br /> (For many setups, leaving `I` and `D` set to 0 should suffice.)|
 |`X` | Stop motor |
 |`Q` | Stop motor, Hi-Z mode (allows free movement of the motor) |
 |`F` \<distance\>| Move forward the specified distance |
@@ -37,10 +36,10 @@ All Serial commands consist of a single-character command, followed by an option
 |`W` | Print current position ("Where am I?")|
 |`Z` | Re-zero: Set current position to be 0 |
 |`H` | Home: Move backwards until limit switch is triggered, then re-zero |
-||**Tracking Mode** (PID Mode)|
+|**Tracking Mode** (PID Mode)||
 |`T` \<position\> | Update target position for tracking |
 |`E` \<error\> | Update instantaneous tracking error |
-||**Troubleshooting**|
+|**Troubleshooting**||
 |`?` | Report motor status |
 |`!` | Check for alarm flags |
 |`$` | Reset motor configuration |
@@ -61,15 +60,15 @@ The `T` command directly updates target position, while the `E` command specifie
 - `W`: Print current position
 - `R 20; Z;` Move backwards by 20, then re-zero
 
-####Tracking pseudo-code
+#### Tracking pseudo-code
 ```C
 // Keep an LED centered on a moving object
 while (true) {
 	frame = AcquireNewCameraFrame();
 	// get x position of object
-	x = GetXPositionOfTrackedObject(frame);
+	xVal = GetXPositionOfTrackedObject(frame);
 	// Update LED motor's tracking target :
-	SerialCommandToArduino("T <X>");
+	SerialCommandToArduino("T <xVal>");
 }
 ```
 
