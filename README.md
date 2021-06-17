@@ -10,6 +10,7 @@ You will need:
 - a stepper motor
 - a DC power supply with sufficient voltage and current for your motor
 Before connecting the the driver board to the Arduino, you must modify a few solder jumpers on the XNucleo board, as shown in the diagram below. Next, connect the dirver to the Arduino and wire up the motor and power connections as shown in the diagram.
+
 ![](docs/Stepper_Board_Modifications.jpg)
 
 ### Software
