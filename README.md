@@ -75,7 +75,7 @@ while (true) {
 ```
 
 ```C
-// Motorized camera on a gantry, tracking amoving object: 
+// Motorized camera on a gantry, tracking a moving object: 
 // Try to center the object in field of view (e.g., at position x=0)
 targetPosition = 0;
 while (true) {
