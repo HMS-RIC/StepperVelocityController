@@ -63,7 +63,8 @@ The `T` command directly updates target position, while the `E` command specifie
 
 #### Tracking pseudo-code
 ```C
-// Keep an LED centered on a moving object
+// Keep a (motorized) LED centered on a moving object
+// Assume camera is fixed.
 while (true) {
 	frame = AcquireNewCameraFrame();
 	// get x position of object
@@ -74,11 +75,14 @@ while (true) {
 ```
 
 ```C
-// Move camera gantry to center an object (e.g., at position x=0)
+// Motorized camera on a gantry, tracking amoving object: 
+// Try to center the object in field of view (e.g., at position x=0)
+targetPosition = 0;
 while (true) {
 	frame = AcquireNewCameraFrame();
 	// get positional error
-	error = GetXPositionOfTrackedObject(frame);
+	currentPosition = GetXPositionOfTrackedObject(frame);
+	error = targetPosition - currentPosition;
 	// Move camera gantry to cancel error:
 	SerialCommandToArduino("E <error>");
 }
