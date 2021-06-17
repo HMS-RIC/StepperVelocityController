@@ -27,7 +27,7 @@ All Serial commands consist of a single-character command, followed by an option
 |---|---|
 |`S`, `A` | Print max speed (`S`) or acceleration rate (`A`) |
 |`S`, `A` \<value\>| Set max speed (`S`) or acceleration rate (`A`) |
-|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking <br /> (For many setups, leaving `I` and `D` set to 0 should suffice.)|
+|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking <br /> (For now, `I` and `D` are disabled — only proportional tracking works.)|
 |`X` | Stop motor |
 |`Q` | Stop motor, Hi-Z mode (allows free movement of the motor) |
 |`F` \<distance\>| Move forward the specified distance |

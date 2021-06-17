@@ -1,6 +1,5 @@
 #include "src/XNucleoDualStepperDriver/XNucleoDualStepperDriver.h"
 #include "src/XNucleoDualStepperDriver/dSPINConstants.h"
-#include "src/PID/PID.h"
 #include <SPI.h>
 #include <math.h>
 
@@ -84,7 +83,7 @@ float error = 0;
 float newVelocity = 0;
 float errorThresh = 0.1; // don't move if abs(error) is below this value
 
-SPid pidState;
+float propGain = 25; // proportional gain for an unloaded Pololu #1206 stepper
 
 
 // ========  SPI/Motor Settings  ==============
@@ -103,18 +102,6 @@ void DEBUG(String message) {
 void setup()
 {
   Serial.begin(115200);
-
-  // Set P, I, and D gain values
-  // These PID values work for an unloaded Pololu #1206 stepper
-  pidState.propGain = 25;     // proportional gain
-  pidState.integratGain = 0;  // integral gain
-  pidState.derGain = 0;    // derivative gain
-  // Limit integrator values to avoid windup (due to reaching motor's top velocity)
-  pidState.integratMax = 1000;  // Maximum and minimum
-  pidState.integratMin = -1000;  // allowable integrator state
-  // Set internal states to 0
-  pidState.derState = 0;     // Last position input
-  pidState.integratState = 0;  // Integrator state
 
   // Start by setting up the pins and the SPI peripheral.
   //  The library doesn't do this for you!
@@ -201,9 +188,9 @@ void track() {
   // update velocity
   currPos = getCurrPos();
   error = posDiff(targetPos, currPos);
-  newVelocity = UpdatePID(&pidState, error, currPos);
-  // TODO maybe stop motor if error or newVel is smaller than some threhold, to prevent jittering.
+  newVelocity = pid->propGain * error; // proportional control (TODO: replace with PID, maybe?)
   if (abs(error)<0.1) {
+    // Stop motor if error or newVel is smaller than some threhold, to prevent jittering.
     motor.softStop();
   } else if (newVelocity >= 0) {
     motor.run(FWD, newVelocity);
@@ -211,17 +198,17 @@ void track() {
     motor.run(REV, -newVelocity);
   }
 
-  // output trakcing info for Arduino Serial Plotter
-  static int printCount = 0;
-  if ((++printCount % 5)==0) {
-    printCount == 0;
-    Serial.print(currPos);
-    Serial.print(" ");
-    Serial.print(targetPos);
-    Serial.print(" ");
-    Serial.print(error);
-    Serial.println(" 0 0 0 0");
-  }
+  // // DEBUG: output tracking info for Arduino Serial Plotter
+  // static int printCount = 0;
+  // if ((++printCount % 5)==0) {
+  //   printCount == 0;
+  //   Serial.print(currPos);
+  //   Serial.print(" ");
+  //   Serial.print(targetPos);
+  //   Serial.print(" ");
+  //   Serial.print(error);
+  //   Serial.println(" 0 0 0 0");
+  // }
 }
 
 void readUSB() {
@@ -295,31 +282,33 @@ void interpretCommand(String message) {
     case 'P': // P: set P gain
     case 'p':
       if (hasArg) {
-        pidState.propGain = arg1;
+        propGain = arg1;
         Serial.print("Setting ");
       }
       Serial.print("P-gain: ");
-      Serial.println(pidState.propGain);
+      Serial.println(propGain);
       break;
 
     case 'I': // I: set I gain
     case 'i':
-    if (hasArg) {
-        pidState.integratGain = arg1;
-        Serial.print("Setting ");
-      }
-      Serial.print("I-gain: ");
-      Serial.println(pidState.integratGain);
+      Serial.println("Integral gain disabled for now.");
+      // if (hasArg) {
+      //   pidState.integratGain = arg1;
+      //   Serial.print("Setting ");
+      // }
+      // Serial.print("I-gain: ");
+      // Serial.println(pidState.integratGain);
       break;
 
     case 'D': // D: set D gain
     case 'd':
-    if (hasArg) {
-        pidState.derGain = arg1;
-        Serial.print("Setting ");
-      }
-      Serial.print("D-gain: ");
-      Serial.println(pidState.derGain);
+      Serial.println("Derivative gain disabled for now.");
+      // if (hasArg) {
+      //   pidState.derGain = arg1;
+      //   Serial.print("Setting ");
+      // }
+      // Serial.print("D-gain: ");
+      // Serial.println(pidState.derGain);
       break;
 
 
