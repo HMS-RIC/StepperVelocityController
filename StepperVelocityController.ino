@@ -188,7 +188,7 @@ void track() {
   // update velocity
   currPos = getCurrPos();
   error = posDiff(targetPos, currPos);
-  newVelocity = pid->propGain * error; // proportional control (TODO: replace with PID, maybe?)
+  newVelocity = propGain * error; // proportional control (TODO: replace with PID, maybe?)
   if (abs(error)<0.1) {
     // Stop motor if error or newVel is smaller than some threhold, to prevent jittering.
     motor.softStop();
@@ -245,7 +245,7 @@ void interpretCommand(String message) {
 
   float arg1 = parameters.toFloat();
   // Does this command have an argument?
-  bool hasArg = (parameters.length() == 0);
+  bool hasArg = (parameters.length() > 0);
 
   DEBUG(String("Command: ")+command);
   DEBUG(String("Argument 1: ")+arg1);
