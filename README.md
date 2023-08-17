@@ -45,7 +45,7 @@ All Serial commands consist of a single-character command, followed by an option
 |`?` | Report motor status |
 |`!` | Check for alarm flags |
 |`$` | Reset motor configuration |
-|`#` \<freq\>| Track a sine wave with frequency speficied in Hz (default: 1 Hz)|
+|`#` \<freq\>| Track a sine wave with frequency specified in Hz (default: 1 Hz)|
 
 
 NOTE: All distances, errors, and absolute positions are specified in *physical units* of your choosing (e.g., degrees, mm, pixels, etc.) which are set up in the code.
@@ -61,8 +61,12 @@ The `T` command directly updates target position, while the `E` command specifie
 - `F 220`: Move forward by 220 units
 - `W`: Print current position
 - `R 20; Z;` Move backwards by 20, then re-zero
+- `V -20` Begin steady movement at -20 units/sec. Terminate the movement with `X`
+	- NOTE: Be careful when setting the motor to continuously. Consider the consequences if the movement isn't terminated.
 
 #### Tracking pseudo-code
+To use tracking, implement the following pseudo-code on a computer that's connected to the motor-driving Arduino.
+
 ```C
 // Keep a (motorized) LED centered on a moving object
 // Assume camera is fixed.
