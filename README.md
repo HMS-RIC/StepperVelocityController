@@ -24,13 +24,13 @@ Make sure the driver board is powered up. Then connect your Arduino to your PC u
 
 All Serial commands consist of a single-character command, followed by an optional numeric argument, followed by a `;` or an end-of-line character.
 
-|Command(s)|Description|
+|Command|Description|
 |---|---|
-|`S`, `A` | Print max speed (`S`) or acceleration rate (`A`) |
-|`S`, `A` \<value\>| Set max speed (`S`) or acceleration rate (`A`) |
-|`P`, `I`, `D` \<optional value\>| Set/Print *P*, *I*, and *D* gains for tracking <br /> (For now, `I` and `D` are disabled — only proportional tracking works.)|
+|`S` \<optional speed\>| Set/Print max speed (in units/sec) |
+|`A` \<optional speed\>| Set/Print acceleration rate (in units/sec) |
 |`X` | Stop motor |
 |`Q` | Stop motor, Hi-Z mode (allows free movement of the motor) |
+|`V` \<speed\>| Begin constant velocity movement (in units/sec).  <br /> NOTE: This will run indefinitely until another movement or stop command is executed (e.g., `V`, `F`, `X`, `Q`) or until limit switch is triggered.|
 |`F` \<distance\>| Move forward the specified distance |
 |`B`, `R` \<distance\>| Move backwards the specified distance |
 |`G` \<position\>| Go to the specified position |
@@ -38,6 +38,7 @@ All Serial commands consist of a single-character command, followed by an option
 |`Z` | Re-zero: Set current position to be 0 |
 |`H` | Home: Move backwards until limit switch is triggered, then re-zero |
 |**Tracking Mode** (PID Mode)||
+|`P` \<optional value\>| Set/Print tracking gain|
 |`T` \<position\> | Update target position for tracking |
 |`E` \<error\> | Update instantaneous tracking error |
 |**Troubleshooting**||

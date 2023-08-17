@@ -285,7 +285,8 @@ void interpretCommand(String message) {
         propGain = arg1;
         Serial.print("Setting ");
       }
-      Serial.print("P-gain: ");
+      Serial.print("Tracking gain: ");
+      // Serial.print("P-gain: ");
       Serial.println(propGain);
       break;
 
@@ -424,6 +425,21 @@ void interpretCommand(String message) {
         targetPos = 0;
         Serial.println("Done");
       }
+      break;
+
+    case 'V': // V: Constant velocity movement
+    case 'v':
+      trackingMode = false;
+      recentAlarm = false;
+      internalStimType = 0;
+      if (arg1 >= 0) {
+        motor.run(FWD, arg1/UNITS_PER_MICROSTEP);
+      } else {
+        motor.run(REV, -arg1/UNITS_PER_MICROSTEP);
+      }
+      Serial.print("Constant velocity: ");
+      Serial.print(arg1);
+      Serial.println(" units/sec");
       break;
 
     case 'T': // T: Track position (PID mode)
