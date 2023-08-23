@@ -9,6 +9,7 @@ You will need:
 - an X-NUCLEO-IHM02A1 stepper driver board
 - a stepper motor
 - a DC power supply with sufficient voltage and current for your motor
+
 Before connecting the the driver board to the Arduino, you must modify a few solder jumpers on the XNucleo board, as shown in the diagram below. Next, connect the dirver to the Arduino and wire up the motor and power connections as shown in the diagram.
 
 ![](docs/Stepper_Board_Modifications.jpg)
@@ -35,10 +36,10 @@ All Serial commands consist of a single-character command, followed by an option
 |`B`, `R` \<distance\>| Move backwards the specified distance |
 |`G` \<position\>| Go to the specified position |
 |`W` | Print current position ("Where am I?")|
-|`Z` | Re-zero: Set current position to be 0 |
+|`Z` | Re-zero: Define current position to be 0 |
 |`H` | Home: Move backwards until limit switch is triggered, then re-zero |
 |**Tracking Mode** (PID Mode)||
-|`P` \<optional value\>| Set/Print tracking gain|
+|`P` \<optional gain value\>| Set/Print tracking gain|
 |`T` \<position\> | Update target position for tracking |
 |`E` \<error\> | Update instantaneous tracking error |
 |**Troubleshooting**||
@@ -50,10 +51,6 @@ All Serial commands consist of a single-character command, followed by an option
 
 NOTE: All distances, errors, and absolute positions are specified in *physical units* of your choosing (e.g., degrees, mm, pixels, etc.) which are set up in the code.
 
-### Tracking Mode
-The motor can track to a dynamically updated target position. The *Track* (`T`) and *Error* (`E`) commands are designed to be called at a regular frequency, e.g., 30 Hz, to update the internal tracking target. The motor velocity is constantly updated to track the current target position.
-
-The `T` command directly updates target position, while the `E` command specifies the current error value (i.e., the difference between the current motor position and the new target position).
 
 ### Examples
 
@@ -63,6 +60,14 @@ The `T` command directly updates target position, while the `E` command specifie
 - `R 20; Z;` Move backwards by 20, then re-zero
 - `V -20` Begin steady movement at -20 units/sec. Terminate the movement with `X`
 	- NOTE: Be careful when setting the motor to continuously. Consider the consequences if the movement isn't terminated.
+
+## Tracking Mode
+The motor can track to a dynamically updated target position. Tracking mode is initiated when a *Track* (`T`) or *Error* (`E`) command is first called. In this mode, the Arduino continuously updates the motor velocity to bring the motor to a target position. While in tracking mode, the computer can continue to call `T` or `E` commands at a regular interval (e.g., every 50 ms) to update the Arduino's internal target position.
+
+The `T` command directly updates the current target position, while the `E` command specifies the current error value (i.e., the difference between the current motor position and the new target position).
+
+Tracking mode ends when any other motion (or stop) command is called, or when the target position is reached and no subsequent tracking commands are called for at least one second.
+
 
 #### Tracking pseudo-code
 To use tracking, implement the following pseudo-code on a computer that's connected to the motor-driving Arduino.
