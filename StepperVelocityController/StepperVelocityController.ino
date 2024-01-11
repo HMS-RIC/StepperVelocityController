@@ -19,10 +19,10 @@ const byte Ithresh = OCD_TH_1125mA; // over-current threshold
 // From stop, motor will first jump to minSpeed, then accelerate
 // at accelRate up to (at most) maxSpeed.
 // Deceleration rate is also set to be accelRate.
-const int minSpeed = 160; // in steps/s;
+const int minSpeed = 0; // in steps/s;
 const int maxSpeed = 2500; // in steps/s
 const int accelRate = 25000; // in steps/s^2
-const int fullSpeed = 100; // in steps/s; use microsteps below this speed
+const int fullSpeed = 1000; // in steps/s; use microsteps below this speed
 const float goToLimitSpeed = maxSpeed; // in steps/s
 
 // // ## The following settings are for the OpenBuilds NEMA17 (1.68A @ 2.77V) stepper
@@ -54,7 +54,8 @@ const int MICROSTEPS_PER_MOTOR_REV = 8 * FULL_STEPS_PER_MOTOR_REV;
 //    (Units could be pixels, mm, degrees, etc...)
 const float UNITS_PER_MOTOR_REV = 360;
 // We can compute our conversion factor:
-const float UNITS_PER_MICROSTEP = UNITS_PER_MOTOR_REV / (float)MICROSTEPS_PER_MOTOR_REV;
+const float UNITS_PER_MICROSTEP = (float)UNITS_PER_MOTOR_REV / (float)MICROSTEPS_PER_MOTOR_REV;
+const float UNITS_PER_STEP = (float)UNITS_PER_MOTOR_REV / (float)FULL_STEPS_PER_MOTOR_REV;
 
 // Are we on a circular path or linear?
 const bool isCircular = false;
@@ -193,9 +194,9 @@ void track() {
     // Stop motor if error or newVel is smaller than some threhold, to prevent jittering.
     motor.softStop();
   } else if (newVelocity >= 0) {
-    motor.run(FWD, newVelocity);
+    motor.run(FWD, newVelocity/UNITS_PER_STEP);
   } else {
-    motor.run(REV, -newVelocity);
+    motor.run(REV, -newVelocity/UNITS_PER_STEP);
   }
 
   // // DEBUG: output tracking info for Arduino Serial Plotter
@@ -433,9 +434,10 @@ void interpretCommand(String message) {
       recentAlarm = false;
       internalStimType = 0;
       if (arg1 >= 0) {
-        motor.run(FWD, arg1/UNITS_PER_MICROSTEP);
+        // NOTE: run speed is in STEPS/sec (not microsteps)
+        motor.run(FWD, arg1/UNITS_PER_STEP);
       } else {
-        motor.run(REV, -arg1/UNITS_PER_MICROSTEP);
+        motor.run(REV, -arg1/UNITS_PER_STEP);
       }
       Serial.print("Constant velocity: ");
       Serial.print(arg1);
@@ -619,7 +621,7 @@ void configMotor(XNucleoStepper* motor)
   // DEBUG(String("MinSpeed: ") + motor->getMinSpeed());
   motor->setMaxSpeed(maxSpeed);
   // DEBUG(String("MaxSpeed: ") + motor->getMaxSpeed());
-  motor->setFullSpeed(maxSpeed);       // microstep below this speed
+  motor->setFullSpeed(fullSpeed);       // microstep below this speed
   // DEBUG(String("FullSpeed: ") + motor->getFullSpeed());
 
 
