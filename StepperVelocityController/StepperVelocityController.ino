@@ -82,7 +82,7 @@ long currSteps = 0;
 float targetPos = 0;
 float error = 0;
 float newVelocity = 0;
-float errorThresh = 0.1; // don't move if abs(error) is below this value
+float errorThresh = 0.1; // don't move if abs(error) is below this value (in position units)
 
 float propGain = 25; // proportional gain for an unloaded Pololu #1206 stepper
 
@@ -177,7 +177,7 @@ void loop()
 
   // 4) Stop tracking if stopped and last update was > 1s ago
   if (trackingMode && (micros()-updateTargetTime > 1e6)) {
-    if (abs(error)<0.1) {
+    if (abs(error) < errorThresh) {
       trackingMode = false;
       internalStimType = 0;
       motor.softStop();
@@ -190,7 +190,7 @@ void track() {
   currPos = getCurrPos();
   error = posDiff(targetPos, currPos);
   newVelocity = propGain * error; // proportional control (TODO: replace with PID, maybe?)
-  if (abs(error)<0.1) {
+  if (abs(error) < errorThresh) {
     // Stop motor if error or newVel is smaller than some threhold, to prevent jittering.
     motor.softStop();
   } else if (newVelocity >= 0) {
