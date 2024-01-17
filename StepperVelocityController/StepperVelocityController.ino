@@ -75,7 +75,7 @@ const float Krun  = 1.0; // fraction of full voltage for const. vel.
 const float Khold = 0.5; // fraction of full voltage for holding
 
 // PID / Targetting
-bool trackingMode = false;
+bool trackingActive = false;
 bool recentAlarm = false;
 float currPos = 0;
 long currSteps = 0;
@@ -85,6 +85,30 @@ float newVelocity = 0;
 float errorThresh = 0.1; // don't move if abs(error) is below this value (in position units)
 
 float propGain = 25; // proportional gain for an unloaded Pololu #1206 stepper
+
+const long int TrackingVelocityUpdateInterval = 1000; // in microseconds
+const long int TrackingTargetUpdateInterval = 16666; // in microseconds / every 16.6 ms (60 Hz)
+
+// Tracking modes
+const int TRACKING_OFF = 0;
+const int TRACKING_EXTERNAL_SERIAL = 1;
+const int TRACKING_EXTERNAL_VOLTAGE = 2;
+const int TRACKING_INTERNAL_SIN = 3;
+const int TRACKING_INTERNAL_STEP = 4;
+int trackingMode = TRACKING_OFF;
+
+
+// Analog tracking signal
+const int analogTrackingPin = A0;
+const float ZeroPositionVoltage = 2.5;  // Input voltage to indicate a target position of 0
+const float UnitsPerVolt = 45.0 / 5.0;  // Conversion from volts to target position units
+
+// For tracking internally generated stimuli
+unsigned long startStimTime = 0;
+unsigned long updateVelTime = 0;
+unsigned long updateTargetTime = 0;
+float sinAmp = 90;
+float sinFreq = 1;
 
 
 // ========  SPI/Motor Settings  ==============
@@ -120,14 +144,6 @@ void setup()
   motor.getAlarmStatusString();
 }
 
-// For tracking internally generated stimuli
-unsigned long startStimTime = 0;
-unsigned long updateVelTime = 0;
-unsigned long updateTargetTime = 0;
-int internalStimType = 0;
-float sinAmp = 90;
-float sinFreq = 1;
-
 unsigned long prevTime = micros();
 bool motorBusy = false;
 bool prevMotorBusy = false;
@@ -143,32 +159,36 @@ void loop()
   if (digitalRead(flagPin)==LOW) {
     Serial.println(motor.getAlarmStatusString());
     recentAlarm = true;
-    trackingMode = false;
-    internalStimType = 0;
+    trackingActive = false;
+    trackingMode = TRACKING_OFF;
     motor.softStop();
   }
 
   // 1) Read and interpret new Serial commands
   readUSB();
 
-  // 2) Track target (if in trackingMode)
-  if (trackingMode) {
-    if (micros()-updateVelTime > 1000) { // every 1 ms
+  // 2) Track target (if in trackingActive)
+  if (trackingActive) {
+    if (micros()-updateVelTime > TrackingVelocityUpdateInterval) {
       updateVelTime = micros();
       track();
     }
   }
 
-  // 3) Update target for internal (debug) stimuli
-  if (internalStimType > 0) {
-    if (micros()-updateTargetTime > 16666) { // every 16.6 ms (60 Hz)
+  // 3) Update target for internal or voltage stimuli
+  if (trackingActive && (trackingMode != TRACKING_EXTERNAL_SERIAL)) {
+    if (micros()-updateTargetTime > TrackingTargetUpdateInterval) {
       updateTargetTime = micros();
       float stimTime = (float)(micros() - startStimTime)/1e6; // stim time in sec
-      if (internalStimType == 1) {
+      if (trackingMode == TRACKING_INTERNAL_SIN) {
         targetPos = sinAmp * sin(sinFreq*stimTime*2*3.141529);
-      } else {
+      } else if (trackingMode == TRACKING_INTERNAL_STEP) {
         targetPos = 0;
         if ((stimTime>2)&&(stimTime<8)) targetPos = 180;
+      } else if (trackingMode == TRACKING_EXTERNAL_VOLTAGE) {
+        int rawVal = analogRead(analogTrackingPin);
+        float voltage = rawVal * 5.0 / 1023.0;
+        targetPos = UnitsPerVolt * (voltage - ZeroPositionVoltage);
       }
     }
     // normalize to circular track if needed
@@ -176,10 +196,10 @@ void loop()
   }
 
   // 4) Stop tracking if stopped and last update was > 1s ago
-  if (trackingMode && (micros()-updateTargetTime > 1e6)) {
+  if (trackingActive && (micros()-updateTargetTime > 1e6)) {
     if (abs(error) < errorThresh) {
-      trackingMode = false;
-      internalStimType = 0;
+      trackingActive = false;
+      trackingMode = TRACKING_OFF;
       motor.softStop();
     }
   }
@@ -316,27 +336,27 @@ void interpretCommand(String message) {
 
     case 'X': // X: soft stop
     case 'x':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       motor.softStop();
       Serial.println("Stopping");
       break;
 
     case 'Q': // Q: Hi-Z (free movements)
     case 'q':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       motor.softHiZ();
       Serial.println("High-Z (free movement)");
       break;
 
     case 'F': // F: forward
     case 'f':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       if (arg1 >= 0) {
         motor.move(FWD, arg1/UNITS_PER_MICROSTEP);
       } else {
@@ -354,9 +374,9 @@ void interpretCommand(String message) {
     case 'b':
     case 'R':
     case 'r':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       if (arg1 >= 0) {
         motor.move(REV, arg1/UNITS_PER_MICROSTEP);
       } else {
@@ -372,9 +392,9 @@ void interpretCommand(String message) {
 
     case 'G': // G: Go to position
     case 'g':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       Serial.print("Moving to position ");
       Serial.println(arg1);
       // This won't work with circular track:
@@ -397,9 +417,9 @@ void interpretCommand(String message) {
     case 'Z': // Z: Re-zero at current position
     case 'z':
       // reset position to limit switch
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       Serial.println("Zeroing");
       motor.resetPos();
       currPos = 0;
@@ -410,8 +430,8 @@ void interpretCommand(String message) {
     case 'h':
       // (don't go home if there was a recent alarm - limit switch may already be pressed)
       if (!recentAlarm) {
-        trackingMode = false;
-        internalStimType = 0;
+        trackingActive = false;
+        trackingMode = TRACKING_OFF;
         Serial.print("Homing... ");
         motor.goUntil(RESET_ABSPOS, REV, goToLimitSpeed);
         while (motor.busyCheck()) {
@@ -430,9 +450,9 @@ void interpretCommand(String message) {
 
     case 'V': // V: Constant velocity movement
     case 'v':
-      trackingMode = false;
+      trackingActive = false;
       recentAlarm = false;
-      internalStimType = 0;
+      trackingMode = TRACKING_OFF;
       if (arg1 >= 0) {
         // NOTE: run speed is in STEPS/sec (not microsteps)
         motor.run(FWD, arg1/UNITS_PER_STEP);
@@ -447,8 +467,8 @@ void interpretCommand(String message) {
     case 'T': // T: Track position (PID mode)
     case 't':
       if (!recentAlarm) {
-        trackingMode = true;
-        internalStimType = 0;
+        trackingActive = true;
+        trackingMode = TRACKING_EXTERNAL_SERIAL;
         targetPos = arg1;
         targetPos = normalizePos(targetPos);
         currPos = getCurrPos();
@@ -460,8 +480,8 @@ void interpretCommand(String message) {
     case 'E': // E: Track error (PID mode)
     case 'e':
       if (!recentAlarm) {
-        trackingMode = true;
-        internalStimType = 0;
+        trackingActive = true;
+        trackingMode = TRACKING_EXTERNAL_SERIAL;
         error = arg1;
         currPos = getCurrPos();
         targetPos = currPos + error;
@@ -498,25 +518,39 @@ void interpretCommand(String message) {
       if (!recentAlarm) {
         sinFreq = 1;
         if (arg1>0) {sinFreq = arg1;}
-        internalStimType = 1;
+        trackingMode = TRACKING_INTERNAL_SIN;
         motor.resetPos();
         targetPos = 0;
         currPos = 0;
         startStimTime = micros();
-        trackingMode = true;
+        trackingActive = true;
       }
       break;
 
-    case '%': // '%' Track a square wave
+    case '%': // '%' Track a square pulse
       if (!recentAlarm) {
-        internalStimType = 2;
+        trackingMode = TRACKING_INTERNAL_STEP;
         motor.resetPos();
         targetPos = 0;
         currPos = 0;
         startStimTime = micros();
-        trackingMode = true;
+        trackingActive = true;
       }
       break;
+
+    case 'L': // 'L' Track an external voltage input
+    case 'l':
+      if (!recentAlarm) {
+        trackingMode = TRACKING_EXTERNAL_VOLTAGE;
+        // First re-zero to current position
+        motor.resetPos();
+        targetPos = 0;
+        currPos = 0;
+        startStimTime = micros();
+        trackingActive = true;
+      }
+      break;
+
 
     default: // unknown command
       Serial.println("#"); // "#" means error
