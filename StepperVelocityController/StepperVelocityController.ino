@@ -27,19 +27,6 @@ const int accelRate = 25000; // in steps/s^2
 const int fullSpeed = 1000; // in steps/s; use microsteps below this speed
 const float goToLimitSpeed = maxSpeed; // in steps/s
 
-// // ## The following settings are for the OpenBuilds NEMA17 (1.68A @ 2.77V) stepper
-// const float Vsupply = 12;   // DC supply voltage
-// const float Vmotor = 2.77;   // motor's nominal voltage (in V)
-// const byte Ithresh = OCD_TH_2625mA; // over-current threshold (or use OCD_TH_2250mA)
-// // Velocity/accleration profile:
-// // From stop, motor will first jump to minSpeed, then accelerate
-// // at accelRate up to (at most) maxSpeed.
-// // Deceleration rate is also set to be accelRate.
-// const int minSpeed = 160; // in steps/s;
-// const int maxSpeed = 500; // in steps/s
-// const int accelRate = 1000; // in steps/s^2
-// const int fullSpeed = 5000; // in steps/s; use microsteps below this speed
-// const float goToLimitSpeed = maxSpeed; // in steps/s
 
 
 // === 2) Conversion to physical units ===
@@ -50,8 +37,8 @@ const float goToLimitSpeed = maxSpeed; // in steps/s
 // (property of the stepper motor; typically 200)
 const int FULL_STEPS_PER_MOTOR_REV = 200;
 // Microstep mode
-const int stepMode = STEP_FS_8; // no microsteps
-const int MICROSTEPS_PER_MOTOR_REV = 8 * FULL_STEPS_PER_MOTOR_REV;
+const int stepMode = STEP_FS_32; // no microsteps
+const int MICROSTEPS_PER_MOTOR_REV = 32 * FULL_STEPS_PER_MOTOR_REV;
 // How many phyical units of translation in one complete motor revolution?
 //    (Units could be pixels, mm, degrees, etc...)
 const float UNITS_PER_MOTOR_REV = 360;
@@ -84,7 +71,8 @@ long currSteps = 0;
 float targetPos = 0;
 float error = 0;
 float newVelocity = 0;
-float errorThresh = 0.2; // don't move if abs(error) is below this value (in position units)
+float errorThresh = 0.2; // Don't move if abs(error) is below this value (in position units)
+                         // Make sure this is larger than microstep size (i.e. UNITS_PER_MICROSTEP)
 
 float propGain = 150; // proportional gain for an unloaded Pololu #1206 stepper
 
@@ -580,7 +568,7 @@ float normalizePos(float pos) {
 }
 
 // Compute difference in positions (A-B), correcting for circular track if needed
-// In a circular track this calue is normalized to [-halfTrackLength +halfTrackLength]
+// In a circular track this value is normalized to [-halfTrackLength +halfTrackLength]
 const float halfTrackLength = circTracLength/2;
 float posDiff(float posA, float posB) {
   float diff = posA - posB;
