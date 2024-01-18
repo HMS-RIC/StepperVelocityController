@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include <math.h>
 
+const bool SERIAL_PLOTTER_OUTPUT = false;
+
 // ###### Customize these variables for your setup ######
 
 // === 1) Motor setup ===
@@ -82,12 +84,12 @@ long currSteps = 0;
 float targetPos = 0;
 float error = 0;
 float newVelocity = 0;
-float errorThresh = 0.1; // don't move if abs(error) is below this value (in position units)
+float errorThresh = 0.2; // don't move if abs(error) is below this value (in position units)
 
-float propGain = 25; // proportional gain for an unloaded Pololu #1206 stepper
+float propGain = 150; // proportional gain for an unloaded Pololu #1206 stepper
 
 const long int TrackingVelocityUpdateInterval = 1000; // in microseconds
-const long int TrackingTargetUpdateInterval = 16666; // in microseconds / every 16.6 ms (60 Hz)
+const long int TrackingTargetUpdateInterval = 1000; // in microseconds
 
 // Tracking modes
 const int TRACKING_OFF = 0;
@@ -220,16 +222,18 @@ void track() {
   }
 
   // // DEBUG: output tracking info for Arduino Serial Plotter
-  // static int printCount = 0;
-  // if ((++printCount % 5)==0) {
-  //   printCount == 0;
-  //   Serial.print(currPos);
-  //   Serial.print(" ");
-  //   Serial.print(targetPos);
-  //   Serial.print(" ");
-  //   Serial.print(error);
-  //   Serial.println(" 0 0 0 0");
-  // }
+  static int printCount = 0;
+  if (SERIAL_PLOTTER_OUTPUT) {
+    if ((++printCount % 5)==0) {
+      printCount == 0;
+      Serial.print(currPos);
+      Serial.print(" ");
+      Serial.print(targetPos);
+      Serial.print(" ");
+      Serial.println(error);
+      // Serial.println(" 0 0 0 0");
+    }
+  }
 }
 
 void readUSB() {
